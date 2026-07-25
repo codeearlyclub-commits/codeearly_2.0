@@ -1,0 +1,380 @@
+// CodeEarly 2.0 — Prisma schema
+// Single source of truth for the data model. Real foreign keys + cascade
+// deletes replace V4's 14-collection manual cleanup. Money is stored in integer
+// kobo. Statuses are enums the database enforces (no more "null"-string bugs).
+//
+// Regenerate the client after edits:   npx prisma generate
+// Create/apply a migration:            npx prisma migrate dev --name <change>
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH (Better Auth core models). `User` is the PARENT account (the auth entity);
+// parent-specific profile fields live here via Better Auth additionalFields.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  name          String
+  image         String?
+  role          String    @default("parent") // parent | admin
+  // Parent profile (additionalFields)
+  phone         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions      Session[]
+  accounts      Account[]
+  children      Child[]
+  invoices      Invoice[]
+  subscriptions Subscription[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOMAIN CORE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Child {
+  id            String   @id @default(cuid())
+  parentId      String
+  parent        User     @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  membershipId  String   @unique // CE-YYYY-XXXX (random, non-sequential suffix)
+  childName     String
+  dateOfBirth   DateTime?
+  gender        String?
+  createdAt     DateTime @default(now())
+
+  enrollments        Enrollment[]
+  programEnrollments ProgramEnrollment[]
+  quizParticipants   QuizParticipant[]
+
+  @@index([parentId])
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Course {
+  id                  String        @id @default(cuid())
+  title               String
+  slug                String        @unique
+  description         String?
+  level               String?
+  ageRange            String?
+  status              PublishStatus @default(DRAFT)
+  requiresSubscription Boolean      @default(false)
+  programOnly         Boolean       @default(false) // hidden from catalogs; program members only
+  priceKobo           Int           @default(0)
+  sortOrder           Int           @default(0)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  enrollments   Enrollment[]
+  programLinks  ProgramCourse[]
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  childId    String
+  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  courseId   String
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  enrolledAt DateTime @default(now())
+
+  @@unique([childId, courseId])
+  @@index([courseId])
+}
+
+model Program {
+  id                   String        @id @default(cuid())
+  title                String
+  type                 String        @default("Summer")
+  description          String?
+  ageRange             String?
+  location             String?
+  status               PublishStatus @default(DRAFT)
+  featuredOnHomepage   Boolean       @default(false)
+  imageUrl             String?
+  priceKobo            Int           @default(0)
+  regularPriceKobo     Int?
+  capacity             Int?
+  startDate            DateTime?
+  endDate              DateTime?
+  registrationDeadline DateTime?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  sessions    ProgramSession[]
+  courses     ProgramCourse[]
+  enrollments ProgramEnrollment[]
+}
+
+model ProgramSession {
+  id          String   @id @default(cuid())
+  programId   String
+  program     Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  title       String
+  date        DateTime
+  virtualLink String?
+
+  @@index([programId])
+}
+
+model ProgramCourse {
+  id        String  @id @default(cuid())
+  programId String
+  program   Program @relation(fields: [programId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  locked    Boolean @default(true)
+  order     Int     @default(0)
+
+  @@unique([programId, courseId])
+}
+
+model ProgramEnrollment {
+  id         String   @id @default(cuid())
+  programId  String
+  program    Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  childId    String
+  child      Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  status     String   @default("active")
+  enrolledAt DateTime @default(now())
+
+  @@unique([programId, childId])
+  @@index([childId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BILLING
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+  FAILED
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  invoiceNumber     String        @unique // CEC-YYYY-NNNN
+  parentId          String
+  parent            User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  childId           String?
+  type              String        // program | course | subscription | custom
+  description       String
+  amountKobo        Int
+  status            InvoiceStatus @default(PENDING)
+  paystackReference String?
+  itemId            String?
+  paidAt            DateTime?
+  dueDate           DateTime?
+  createdAt         DateTime      @default(now())
+
+  payment Payment?
+
+  @@index([parentId])
+  @@index([status])
+  @@index([paystackReference])
+}
+
+// Immutable ledger row — one per confirmed Paystack transaction.
+model Payment {
+  id            String   @id @default(cuid())
+  invoiceId     String?  @unique
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+  reference     String   @unique
+  amountKobo    Int
+  currency      String   @default("NGN")
+  customerEmail String
+  type          String
+  status        String
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([customerEmail])
+}
+
+model Subscription {
+  id                String    @id @default(cuid())
+  parentId          String
+  parent            User      @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  childId           String?   // per-child scope
+  planName          String
+  scope             String    @default("per_child") // per_child | family
+  durationMonths    Int       @default(1)
+  priceKobo         Int
+  paystackReference String?
+  status            String    @default("active")
+  startDate         DateTime  @default(now())
+  endDate           DateTime
+
+  @@index([parentId])
+  @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUIZ ENGINE (server-authoritative; phase is a DB-enforced enum)
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum QuizPhase {
+  LOBBY
+  ACTIVE
+  REVEALED
+  ENDED
+}
+
+model Competition {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  type        String   @default("quiz") // quiz | project | general
+  status      String   @default("upcoming")
+  createdAt   DateTime @default(now())
+
+  questions QuizQuestion[]
+  sessions  QuizSession[]
+}
+
+model QuizQuestion {
+  id               String      @id @default(cuid())
+  competitionId    String
+  competition      Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  text             String
+  options          String[]
+  correctAnswer    String
+  timeLimitSeconds Int         @default(30)
+  order            Int         @default(0)
+
+  answers QuizAnswer[]
+
+  @@index([competitionId])
+}
+
+model QuizSession {
+  id                       String      @id @default(cuid())
+  competitionId            String
+  competition              Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  phase                    QuizPhase   @default(LOBBY)
+  currentQuestionIndex     Int         @default(-1)
+  currentQuestionStartedAt DateTime?
+  startedAt                DateTime    @default(now())
+  endedAt                  DateTime?
+
+  participants QuizParticipant[]
+  answers      QuizAnswer[]
+  result       QuizResult?
+
+  @@index([competitionId])
+  @@index([phase])
+}
+
+model QuizParticipant {
+  id         String      @id @default(cuid())
+  sessionId  String
+  session    QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  childId    String
+  child      Child       @relation(fields: [childId], references: [id], onDelete: Cascade)
+  memberName String
+  totalScore Int         @default(0)
+  rank       Int?
+  joinedAt   DateTime    @default(now())
+
+  answers QuizAnswer[]
+
+  @@unique([sessionId, childId])
+  @@index([sessionId])
+}
+
+model QuizAnswer {
+  id             String          @id @default(cuid())
+  sessionId      String
+  session        QuizSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participantId  String
+  participant    QuizParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  questionId     String
+  question       QuizQuestion    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedAnswer String
+  correct        Boolean
+  pointsEarned   Int
+  answeredAt     DateTime        @default(now())
+
+  @@unique([sessionId, participantId, questionId])
+  @@index([sessionId])
+}
+
+// Immutable snapshot of a finished session — the source of truth for results/PDFs.
+model QuizResult {
+  id               String      @id @default(cuid())
+  sessionId        String      @unique
+  session          QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  competitionId    String
+  competitionTitle String
+  leaderboard      Json        // [{ rank, name, score }]
+  participants     Json        // full per-participant answers
+  endedAt          DateTime    @default(now())
+
+  @@index([competitionId])
+}

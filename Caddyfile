@@ -1,0 +1,19 @@
+# Caddy reverse proxy — automatic HTTPS in production.
+#
+# Local dev: SITE_DOMAIN=localhost → Caddy serves http/https on localhost with a
+# local cert. Production: set SITE_DOMAIN=www.codeearly.com and Caddy fetches a
+# real Let's Encrypt certificate automatically (ports 80/443 must be open).
+
+{$SITE_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy app:3000
+
+	# Security headers (mirrors what we hardened in V4)
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+}

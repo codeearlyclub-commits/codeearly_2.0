@@ -1,0 +1,32 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# env
+.env
+.env*.local
+!.env.example
+
+# prisma
+/prisma/*.db
+
+# docker volumes (if ever bind-mounted locally)
+/data
+
+# misc
+.DS_Store
+*.pem
+/coverage
+*.tsbuildinfo
+.idea
+.vscode/*
+!.vscode/extensions.json

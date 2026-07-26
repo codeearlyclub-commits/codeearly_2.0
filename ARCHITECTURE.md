@@ -123,7 +123,49 @@ versioned API that accepts bearer-token auth**, so web (cookies) and mobile
 token flow; server logic in `src/server/*` is transport-agnostic so it serves
 both without duplication. Push via a `push` BullMQ queue → FCM/APNs.
 
-## 7c. Admin information architecture
+## 7c. Public quiz product (paid, multi-tenant)
+
+The quiz engine is not only CodeEarly's — it is also **sold as a product**: schools,
+event organisers, other coding clubs, and self-serve signups pay to run their own
+live quizzes on it. This is a **Phase 4 deliverable**, built alongside the
+CodeEarly engine rather than retrofitted, because three of its requirements are
+structural and cannot be added cheaply later.
+
+**Tenancy.** Every quiz belongs to an `Organization`. CodeEarly itself is the
+seeded `SYSTEM` org (`id = "codeearly"`), so first-party content is not a special
+case with a null owner and every quiz query is org-scoped through one code path.
+Cross-org reads are impossible by construction, not by remembering a `where`.
+
+**Guest players.** `QuizParticipant.childId` is **nullable**. A school running a
+40-child quiz cannot create 40 parent accounts first, so a player is either a
+CodeEarly `Child` or an anonymous guest holding a `guestToken` and a display
+name. This is the single most expensive thing to retrofit — it touches every
+leaderboard, result snapshot and PDF path — which is why it lands in the first
+migration.
+
+**Entitlements, not hard-coded limits.** `QuizPlan` is an admin-editable
+catalogue (`free | starter | pro | event_pass`) carrying player caps, question
+caps, PDF export and branding rights. Limits are **snapshotted onto the
+Organization at purchase** and onto `QuizSession.maxPlayers` at session
+creation — so a pricing change can never shrink a room someone already paid for
+or break an event that is mid-flight.
+
+**Commercial model:** the free tier is a **5-player trial room** — enough to see
+the engine work, too small to run a real class — and every real-sized room is a
+paid plan (bigger rooms, more questions, PDF export, branding removal). Billing reuses the
+Paystack rail: `Invoice` and `Subscription` are payable by **either** a parent
+**or** an organization — never both, never neither, enforced by database CHECK
+constraints (`invoice_payer_exactly_one`, `subscription_holder_exactly_one`)
+rather than by application discipline.
+
+**Trust & safety — designed in, not bolted on.** Public rooms put strangers near
+children, so: join codes are per-session and released when the session ends;
+`requireHostApproval` gates admission; display names are filtered for profanity
+and PII; there is no free-text chat; hosting requires a verified org owner; and
+suspensions record their reason. CodeEarly member data is never visible to any
+outside org.
+
+## 7d. Admin information architecture
 
 V4's admin was ~35 flat nav items. 2.0 uses **grouped, collapsible sections plus
 a ⌘K command palette**:
@@ -132,6 +174,7 @@ a ⌘K command palette**:
 - **People** — Members · Students · Subscribers
 - **Learning** — Courses · Programs · Report Cards · Certificates · Tasks · Challenges
 - **Live** — Quiz/Competitions · Events · Kahoot
+- **Quiz Product** — Organisations · Quiz Plans · Hosted Sessions · Abuse Reports
 - **Money** — Payments · Invoices · Plans · Subscriptions
 - **Marketing** — Website Content · Blog · Showcase · Testimonials · FAQs · Newsletter · Messages
 - **System** — Settings · Admin Users · Maintenance · API Docs
@@ -165,7 +208,12 @@ Replaces V4's single daily Vercel cron dispatcher:
 - **Phase 1 — Auth & members:** parent/child accounts, sessions in Redis, email verify, rate limits.
 - **Phase 2 — Payments & billing:** Paystack + webhook + BullMQ email; invoices incl. custom invoices with pay links.
 - **Phase 3 — Courses & programs:** LMS, enrollments, program-only locks, public marketing pages (ported UI).
-- **Phase 4 — Quiz engine:** Socket.io + Redis, full lifecycle, PDFs via worker.
+- **Phase 4 — Quiz engine + public quiz product:** Socket.io + Redis, full
+  lifecycle, PDFs via worker — built multi-tenant from the first line. Plus the
+  saleable product on top: org signup, join-code rooms with guest players, plan
+  entitlements + Paystack checkout, host dashboard, public quiz directory, and
+  the trust & safety controls in §7c. _By far the largest phase — it ships a
+  second product, and it sits ahead of cut-over by explicit decision._
 - **Phase 5 — Admin:** dashboard, content editors (schema-validated), CSV exports, DB monitors.
 - **Phase 6 — Migrate & cut over:** data migration, verification, DNS switch.
 
@@ -175,6 +223,19 @@ Replaces V4's single daily Vercel cron dispatcher:
 - **Mobile:** Capacitor wrapping the portal; API must support bearer tokens.
 - **Auth:** Better Auth (self-hosted, Postgres, cookie + token, 2FA/verify/roles built in).
 - **Admin IA:** grouped nav + ⌘K palette.
+
+## 12b. Decisions locked (round 3)
+
+- **Reference codebase:** V4 at `codeearly-website` — port its domain logic and
+  business rules; **redesign the UI** (it is for kids, and 2.0 should look it).
+- **Public quiz product:** build in full as part of Phase 4, sold to schools,
+  event organisers, clubs and self-serve signups. Free tier + paid caps.
+- **Tenancy in the first migration:** `Organization`, nullable
+  `QuizParticipant.childId`, `QuizPlan` entitlements and org-payable
+  invoices/subscriptions all land in the initial schema — none of it is a later
+  migration.
+- **Git:** `origin` = `github.com/codeearlyclub-commits/codeearly_2.0`, default
+  branch `main`, commits authored as `codeearlyclub@gmail.com`.
 
 ## 13. Open questions before Phase 0
 

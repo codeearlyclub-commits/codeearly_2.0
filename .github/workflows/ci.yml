@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # Real Postgres + Redis rather than mocks: the whole point of 2.0 is that
+    # the database enforces the rules (foreign keys, enums, CHECK constraints),
+    # so CI has to actually apply the migrations to prove they work.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: codeearly
+          POSTGRES_PASSWORD: codeearly
+          POSTGRES_DB: codeearly_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U codeearly"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://codeearly:codeearly@localhost:5432/codeearly_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real
+      BETTER_AUTH_URL: http://localhost:3000
+      APP_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed (must be idempotent — runs on every deploy)
+        run: npm run db:seed
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

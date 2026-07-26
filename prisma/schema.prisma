@@ -32,11 +32,13 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  sessions      Session[]
-  accounts      Account[]
-  children      Child[]
-  invoices      Invoice[]
-  subscriptions Subscription[]
+  sessions       Session[]
+  accounts       Account[]
+  children       Child[]
+  invoices       Invoice[]
+  subscriptions  Subscription[]
+  ownedOrgs      Organization[] @relation("OrgOwner")
+  orgMemberships OrgMember[]
 
   @@map("user")
 }
@@ -217,13 +219,18 @@ enum InvoiceStatus {
   FAILED
 }
 
+/// Billed to EITHER a parent (member billing) OR an organization (public quiz
+/// product) — never both, never neither. A CHECK constraint in the migration
+/// enforces that; see `invoice_payer_exactly_one`.
 model Invoice {
   id                String        @id @default(cuid())
   invoiceNumber     String        @unique // CEC-YYYY-NNNN
-  parentId          String
-  parent            User          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentId          String?
+  parent            User?         @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   childId           String?
-  type              String        // program | course | subscription | custom
+  type              String        // program | course | subscription | custom | quiz_plan
   description       String
   amountKobo        Int
   status            InvoiceStatus @default(PENDING)
@@ -236,6 +243,7 @@ model Invoice {
   payment Payment?
 
   @@index([parentId])
+  @@index([organizationId])
   @@index([status])
   @@index([paystackReference])
 }
@@ -257,22 +265,145 @@ model Payment {
   @@index([customerEmail])
 }
 
+/// Held by EITHER a parent (member subscription) OR an organization (quiz plan)
+/// — never both, never neither. Enforced by `subscription_holder_exactly_one`.
 model Subscription {
-  id                String    @id @default(cuid())
-  parentId          String
-  parent            User      @relation(fields: [parentId], references: [id], onDelete: Cascade)
-  childId           String?   // per-child scope
+  id                String        @id @default(cuid())
+  parentId          String?
+  parent            User?         @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  organizationId    String?
+  organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  childId           String?       // per-child scope (member subscriptions only)
   planName          String
-  scope             String    @default("per_child") // per_child | family
-  durationMonths    Int       @default(1)
+  scope             String        @default("per_child") // per_child | family | organization
+  durationMonths    Int           @default(1)
   priceKobo         Int
   paystackReference String?
-  status            String    @default("active")
-  startDate         DateTime  @default(now())
+  status            String        @default("active")
+  startDate         DateTime      @default(now())
   endDate           DateTime
 
   @@index([parentId])
+  @@index([organizationId])
   @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ORGANIZATIONS — the tenancy boundary for the paid public quiz product.
+//
+// CodeEarly itself is an Organization (the seeded SYSTEM org, id "codeearly"),
+// so every quiz query is org-scoped uniformly and first-party content is never
+// a special case with a null owner. Outside hosts — schools, event organisers,
+// clubs, self-serve signups — get their own org and see only their own data.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum OrgType {
+  SCHOOL
+  EVENT
+  CLUB
+  OTHER
+  SYSTEM // CodeEarly's own org — exempt from plan limits
+}
+
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED // abuse / chargeback: blocks hosting, preserves data
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  HOST // can run sessions, cannot manage billing or members
+}
+
+/// Plan catalogue for the public quiz product. Admin-editable so pricing and
+/// limits change without a deploy. `key` is the stable identifier code uses.
+model QuizPlan {
+  id                   String  @id @default(cuid())
+  key                  String  @unique // free | starter | pro | event_pass
+  name                 String
+  description          String?
+  priceKobo            Int     @default(0)
+  interval             String  @default("month") // month | year | one_time
+  /// one_time plans (event passes) expire this many hours after purchase
+  validityHours        Int?
+  // ── Entitlements ──────────────────────────────────────────────────────────
+  // Defaults mirror the free tier: a 5-player trial room. Every real-sized
+  // room is a paid plan.
+  maxPlayersPerSession Int     @default(5)
+  maxQuestionsPerQuiz  Int     @default(10)
+  maxSessionsPerMonth  Int?    // null = unlimited
+  allowPdfExport       Boolean @default(false)
+  allowCustomBranding  Boolean @default(false)
+  allowGuestPlayers    Boolean @default(true)
+  sortOrder            Int     @default(0)
+  active               Boolean @default(true)
+
+  organizations Organization[]
+}
+
+model Organization {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  type     OrgType   @default(OTHER)
+  status   OrgStatus @default(ACTIVE)
+  /// Null only for the seeded SYSTEM org (CodeEarly owns itself — no user row
+  /// should be able to delete the platform's own tenant). Enforced by the
+  /// `org_owner_required_unless_system` CHECK constraint.
+  ownerId  String?
+  owner    User?     @relation("OrgOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  contactEmail String?
+
+  // Branding (gated by the allowCustomBranding entitlement)
+  logoUrl    String?
+  brandColor String?
+
+  // ── Plan + entitlement snapshot ───────────────────────────────────────────
+  // Limits are COPIED from QuizPlan at purchase time, not read through the
+  // relation. A later price/limit change must never retroactively shrink a
+  // room someone already paid for or break a scheduled event mid-flight.
+  planKey              String    @default("free")
+  plan                 QuizPlan  @relation(fields: [planKey], references: [key])
+  planStartedAt        DateTime  @default(now())
+  planExpiresAt        DateTime? // null = perpetual (free tier)
+  maxPlayersPerSession Int       @default(5)
+  maxQuestionsPerQuiz  Int       @default(10)
+  maxSessionsPerMonth  Int?
+  allowPdfExport       Boolean   @default(false)
+  allowCustomBranding  Boolean   @default(false)
+
+  // ── Trust & safety ────────────────────────────────────────────────────────
+  // Public rooms put strangers near children, so hosting is gated on a verified
+  // owner and every suspension keeps its reason for audit.
+  verifiedAt        DateTime?
+  suspendedAt       DateTime?
+  suspensionReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members       OrgMember[]
+  competitions  Competition[]
+  invoices      Invoice[]
+  subscriptions Subscription[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([planKey])
+}
+
+model OrgMember {
+  id       String       @id @default(cuid())
+  orgId    String
+  org      Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     OrgRole      @default(HOST)
+  joinedAt DateTime     @default(now())
+
+  @@unique([orgId, userId])
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -286,16 +417,28 @@ enum QuizPhase {
   ENDED
 }
 
+enum QuizVisibility {
+  MEMBERS  // CodeEarly members only — child account required to play
+  UNLISTED // anyone holding the join code may play as a guest
+  PUBLIC   // additionally listed in the public quiz directory
+}
+
 model Competition {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  type        String   @default("quiz") // quiz | project | general
-  status      String   @default("upcoming")
-  createdAt   DateTime @default(now())
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title          String
+  description    String?
+  type           String         @default("quiz") // quiz | project | general
+  status         String         @default("upcoming")
+  visibility     QuizVisibility @default(MEMBERS)
+  createdAt      DateTime       @default(now())
 
   questions QuizQuestion[]
   sessions  QuizSession[]
+
+  @@index([organizationId])
+  @@index([visibility])
 }
 
 model QuizQuestion {
@@ -323,6 +466,17 @@ model QuizSession {
   startedAt                DateTime    @default(now())
   endedAt                  DateTime?
 
+  /// Room PIN for guest players. Released (set to null) when the session ends
+  /// so codes can be reused; the code that was used is kept on QuizResult.
+  joinCode            String? @unique
+  /// Host must admit each joiner — the safety default for public rooms.
+  requireHostApproval Boolean @default(false)
+  /// Snapshot of the org's player cap at session creation, so a plan change
+  /// mid-event cannot shrink a room that is already running.
+  maxPlayers          Int     @default(5)
+  /// Which user is running this session (org host or CodeEarly admin).
+  hostUserId          String?
+
   participants QuizParticipant[]
   answers      QuizAnswer[]
   result       QuizResult?
@@ -331,20 +485,33 @@ model QuizSession {
   @@index([phase])
 }
 
+/// A player in a session. Either a CodeEarly member (`childId` set) OR an
+/// anonymous guest (`childId` null, identified by `guestToken`). Public rooms
+/// cannot require every player to hold an account, so guest play is first-class
+/// rather than a special case bolted on later.
 model QuizParticipant {
-  id         String      @id @default(cuid())
-  sessionId  String
-  session    QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  childId    String
-  child      Child       @relation(fields: [childId], references: [id], onDelete: Cascade)
-  memberName String
-  totalScore Int         @default(0)
-  rank       Int?
-  joinedAt   DateTime    @default(now())
+  id          String      @id @default(cuid())
+  sessionId   String
+  session     QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  childId     String?
+  child       Child?      @relation(fields: [childId], references: [id], onDelete: Cascade)
+  /// Opaque token stored client-side so a guest can rejoin their own seat after
+  /// a disconnect without impersonating anyone else.
+  guestToken  String?
+  /// Shown on the leaderboard. Member name, or a guest's chosen name after
+  /// profanity/PII filtering.
+  displayName String
+  approved    Boolean     @default(true) // false while awaiting host admission
+  totalScore  Int         @default(0)
+  rank        Int?
+  joinedAt    DateTime    @default(now())
 
   answers QuizAnswer[]
 
+  // NULLs compare distinct in Postgres, so many guests coexist while a member
+  // still cannot join the same session twice.
   @@unique([sessionId, childId])
+  @@unique([sessionId, guestToken])
   @@index([sessionId])
 }
 
@@ -372,9 +539,16 @@ model QuizResult {
   session          QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   competitionId    String
   competitionTitle String
+  /// Denormalised snapshot — which org ran this. No FK: this table is an audit
+  /// record, and it already dies with the org via Competition → Session cascade.
+  organizationId   String
+  /// The room PIN this session used, kept for support/audit after the live
+  /// code is released back to the pool.
+  joinCode         String?
   leaderboard      Json        // [{ rank, name, score }]
   participants     Json        // full per-participant answers
   endedAt          DateTime    @default(now())
 
   @@index([competitionId])
+  @@index([organizationId])
 }

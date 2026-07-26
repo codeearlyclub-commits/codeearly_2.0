@@ -31,8 +31,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Host port 6380 — 6379 is taken by another project's Redis on this machine.
+    # Containers still reach it in-network on 6379 (see app/worker REDIS_URL).
     ports:
-      - "6379:6379"
+      - "6380:6379"
 
   app:
     build:

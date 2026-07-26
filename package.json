@@ -14,7 +14,11 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
     "auth:generate": "npx @better-auth/cli generate --output prisma/schema.prisma"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",

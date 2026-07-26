@@ -236,6 +236,16 @@ Replaces V4's single daily Vercel cron dispatcher:
   migration.
 - **Git:** `origin` = `github.com/codeearlyclub-commits/codeearly_2.0`, default
   branch `main`, commits authored as `codeearlyclub@gmail.com`.
+- **Child access:** children are **profiles a parent manages, not user
+  accounts** — we store no email and no password for a minor. A parent may
+  additionally issue a revocable **student code + 4-digit PIN** granting a
+  restricted, 12-hour, Redis-backed session (lessons, tasks, quizzes, own report
+  card) that can never reach billing, settings, siblings' data or the parent's
+  details. Regenerating the code kills every live session immediately, so it
+  doubles as the "someone knows my child's PIN" panic button. The PIN's hash is
+  not the defence — the 6-character code (28^6 ≈ 480M) plus a 5-attempt lockout
+  and IP rate limiting are. Child sessions are a separate token namespace from
+  Better Auth's, so a child token can never be replayed as a parent's.
 
 ## 13. Open questions before Phase 0
 

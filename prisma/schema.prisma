@@ -94,6 +94,11 @@ model Verification {
 // DOMAIN CORE
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// A child is a profile the parent manages, NOT a full user account — we hold
+/// no email and no password for a minor. Children may optionally be given a
+/// restricted sign-in of their own: a parent-issued code plus a PIN, revocable
+/// at any time, granting lessons/tasks/quizzes only (never billing, settings,
+/// siblings' data, or the parent's details).
 model Child {
   id            String   @id @default(cuid())
   parentId      String
@@ -103,6 +108,19 @@ model Child {
   dateOfBirth   DateTime?
   gender        String?
   createdAt     DateTime @default(now())
+
+  // ── Student sign-in (optional, parent-controlled) ─────────────────────────
+  /// Short readable code the child types. Distinct from membershipId, which is
+  /// printed on certificates — a code on public paper must never be a credential.
+  loginCode         String?   @unique
+  /// scrypt hash. A 4-digit PIN has only 10k values, so the real defence is
+  /// lockout + rate limiting, not the hash — but we never store the PIN itself.
+  pinHash           String?
+  loginEnabled      Boolean   @default(false)
+  pinUpdatedAt      DateTime?
+  /// Lockout state. Reset on success; parent can clear it by reissuing the PIN.
+  failedPinAttempts Int       @default(0)
+  lockedUntil       DateTime?
 
   enrollments        Enrollment[]
   programEnrollments ProgramEnrollment[]

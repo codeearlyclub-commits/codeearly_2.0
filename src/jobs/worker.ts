@@ -11,6 +11,8 @@ import "dotenv/config";
 import { Worker, type Job } from "bullmq";
 import { bullConnection } from "@/lib/redis";
 import type { EmailJob, ReminderJob, QuizJob, BackupJob } from "./queues";
+import { expireEndedSubscriptions } from "@/server/payments/subscriptions";
+import { expireLapsedOrgPlans } from "@/server/orgs/plans";
 
 const log = (q: string, msg: string, extra?: unknown) =>
   console.log(`[worker:${q}] ${msg}`, extra ?? "");
@@ -41,7 +43,20 @@ workers.push(
 workers.push(
   new Worker<ReminderJob>("reminders", async (job: Job<ReminderJob>) => {
     log("reminders", `run → ${job.data.kind}`);
-    // TODO(Phase 3): scan due subscriptions/sessions/birthdays, enqueue emails.
+
+    if (job.data.kind === "subscription-expiry") {
+      // Both are non-destructive: they downgrade access, never delete anything
+      // the customer already has. Safe to run repeatedly — each only touches
+      // rows whose end date has actually passed.
+      const [members, orgs] = await Promise.all([
+        expireEndedSubscriptions(),
+        expireLapsedOrgPlans(),
+      ]);
+      log("reminders", `expired ${members} subscription(s), ${orgs} org plan(s)`);
+      return;
+    }
+
+    // TODO(Phase 3): program session reminders, birthdays.
   }, { connection: bullConnection })
 );
 

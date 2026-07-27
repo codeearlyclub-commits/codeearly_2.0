@@ -204,6 +204,13 @@ Replaces V4's single daily Vercel cron dispatcher:
 
 ## 11. Phased roadmap
 
+> **Superseded.** This section was written before any code existed. The live
+> plan — with actual status per surface, verified checks, known debt and a
+> revised phase order — is in **[PLAN.md](./PLAN.md)**. The most significant
+> change: the saleable public quiz product moved to *after* the V4 cut-over, so
+> the live platform is not waiting behind a second product. Kept below for the
+> original reasoning.
+
 - **Phase 0 — Foundation:** Compose (postgres+redis+app+caddy), Prisma schema + first migration, env, CI, health checks. _App boots, DB connected._
 - **Phase 1 — Auth & members:** parent/child accounts, sessions in Redis, email verify, rate limits.
 - **Phase 2 — Payments & billing:** Paystack + webhook + BullMQ email; invoices incl. custom invoices with pay links.

@@ -9,6 +9,13 @@ const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_URL: z.string().url().default("http://localhost:3000"),
 
+  // Kept optional so a missing payment/email/storage credential degrades that
+  // one feature instead of refusing to boot the whole site. Only the three
+  // below this line are genuinely required to serve a request at all.
+  PAYSTACK_CALLBACK_URL: z.string().url().optional(),
+  NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: z.string().optional(),
+  LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).optional(),
+
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   REDIS_URL: z.string().min(1, "REDIS_URL is required"),
 

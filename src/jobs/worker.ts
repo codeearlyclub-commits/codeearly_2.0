@@ -9,8 +9,11 @@
  */
 import "dotenv/config";
 import { Worker, type Job } from "bullmq";
+// Validates the environment at boot. The worker runs in its own container, so
+// it must check its own config rather than assume the web container did.
+import "@/lib/env";
 import { bullConnection } from "@/lib/redis";
-import type { EmailJob, ReminderJob, QuizJob, BackupJob } from "./queues";
+import type { EmailJob, ReminderJob, QuizJob, BackupJob, PushJob } from "./queues";
 import { expireEndedSubscriptions } from "@/server/payments/subscriptions";
 import { expireLapsedOrgPlans } from "@/server/orgs/plans";
 
@@ -71,6 +74,16 @@ workers.push(
   new Worker<BackupJob>("backup", async (job: Job<BackupJob>) => {
     log("backup", `run → ${job.data.kind}`);
     // TODO(Phase 6): pg_dump → R2 with retention.
+  }, { connection: bullConnection })
+);
+
+// The `push` queue existed with no consumer, so any native notification we
+// enqueued would have sat in Redis forever. A stub that logs is not a feature,
+// but it does mean the queue drains and failures are visible.
+workers.push(
+  new Worker<PushJob>("push", async (job: Job<PushJob>) => {
+    log("push", `${job.data.tokens.length} device(s) :: ${job.data.title}`);
+    // TODO(mobile): FCM/APNs delivery once the Capacitor app registers tokens.
   }, { connection: bullConnection })
 );
 

@@ -134,6 +134,8 @@ model Child {
   enrollments        Enrollment[]
   programEnrollments ProgramEnrollment[]
   quizParticipants   QuizParticipant[]
+  invoices           Invoice[]
+  subscriptions      Subscription[]
 
   @@index([parentId])
 }
@@ -262,6 +264,10 @@ model Invoice {
   organizationId    String?
   organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   childId           String?
+  /// SetNull, not Cascade: a paid invoice is a financial record and must
+  /// survive the child's profile being removed. It loses the link, never the
+  /// row — deleting accounting history to tidy up a profile is not acceptable.
+  child             Child?        @relation(fields: [childId], references: [id], onDelete: SetNull)
   type              String        // program | course | subscription | custom | quiz_plan
   description       String
   amountKobo        Int
@@ -319,6 +325,7 @@ model Subscription {
   organizationId    String?
   organization      Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   childId           String?       // per-child scope (member subscriptions only)
+  child             Child?        @relation(fields: [childId], references: [id], onDelete: SetNull)
   planName          String
   scope             String        @default("per_child") // per_child | family | organization
   durationMonths    Int           @default(1)

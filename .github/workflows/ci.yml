@@ -70,6 +70,9 @@ jobs:
       - name: Programs cannot be oversold
         run: npx tsx scripts/check-program-capacity.ts
 
+      - name: Unit tests
+        run: npm test
+
       - name: Typecheck
         run: npm run typecheck
 

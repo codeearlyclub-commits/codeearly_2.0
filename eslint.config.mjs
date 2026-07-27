@@ -1,17 +1,15 @@
-import { dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { FlatCompat } from "@eslint/eslintrc";
-
-const compat = new FlatCompat({
-  baseDirectory: dirname(fileURLToPath(import.meta.url)),
-});
+import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
+import nextTypescript from "eslint-config-next/typescript";
 
 /**
- * ESLint flat config. `npm run lint` had no config file at all before this, so
- * it failed rather than linting anything.
+ * ESLint flat config.
+ *
+ * eslint-config-next v16 ships native flat config, so this composes its arrays
+ * directly. The previous FlatCompat/@eslint/eslintrc bridge crashed against it
+ * ("Converting circular structure to JSON") and is no longer needed — which
+ * also drops the eslintrc dependency chain that several advisories sat in.
  */
-export default [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+const config = [
   {
     ignores: [
       ".next/**",
@@ -20,17 +18,30 @@ export default [
       "next-env.d.ts",
     ],
   },
+
+  ...nextCoreWebVitals,
+  ...nextTypescript,
+
+  {
+    // Pinned rather than auto-detected: eslint-plugin-react's version sniffing
+    // calls an ESLint 9 API that ESLint 10 removed, and crashes the whole run.
+    // Naming the version skips that code path entirely.
+    settings: { react: { version: "19.2" } },
+  },
+
   {
     rules: {
-      // Unused vars are a real signal in a codebase this young — but allow the
+      // Unused vars are a real signal in a codebase this young, with the
       // conventional underscore escape hatch.
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       // We are rebuilding precisely because V4 leaned on `any` and silent
-      // failures. Warn now, tighten to error once the port is complete.
+      // failures. Warn now; tighten to error once the port is complete.
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 ];
+
+export default config;

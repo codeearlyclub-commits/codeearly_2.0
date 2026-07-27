@@ -26,7 +26,13 @@ model User {
   emailVerified Boolean   @default(false)
   name          String
   image         String?
-  role          String    @default("parent") // parent | admin
+  // Managed by Better Auth's admin() plugin: "user" (a parent) | "admin"
+  // (CodeEarly staff). The plugin writes these columns itself, so they must
+  // exist here or every sign-up fails at the insert.
+  role          String    @default("user")
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
   // Parent profile (additionalFields)
   phone         String?
   createdAt     DateTime  @default(now())
@@ -50,6 +56,9 @@ model Session {
   expiresAt DateTime
   ipAddress String?
   userAgent String?
+  /// Set by the admin() plugin when staff impersonate a parent for support.
+  /// Recorded so support access is auditable rather than invisible.
+  impersonatedBy String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

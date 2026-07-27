@@ -19,8 +19,22 @@ const workers: Worker[] = [];
 
 workers.push(
   new Worker<EmailJob>("email", async (job: Job<EmailJob>) => {
+    const configured = Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
+
+    if (!configured) {
+      // No provider yet. Print the full text body rather than swallowing it —
+      // in development the verification link lives in here, and email
+      // verification is required to sign in, so hiding it would make local
+      // signup impossible. Throwing instead would just fill the DLQ.
+      log("email", `NO PROVIDER — printing instead of sending`);
+      log("email", `to: ${job.data.to} | subject: ${job.data.subject}`);
+      console.log(job.data.text);
+      return;
+    }
+
     log("email", `send → ${job.data.to} :: ${job.data.subject}`);
-    // TODO(Phase 2): Resend primary + SMTP fallback, provider rate limits.
+    // TODO(Phase 2): Resend primary + SMTP (Brevo) fallback, provider rate
+    // limits. Needs the `resend` and `nodemailer` packages added first.
   }, { connection: bullConnection, concurrency: 5 })
 );
 

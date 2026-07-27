@@ -2,6 +2,8 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { bearer, admin } from "better-auth/plugins";
 import { prisma } from "@/lib/prisma";
+import { redis } from "@/lib/redis";
+import { sendEmail, verificationEmail, passwordResetEmail } from "@/server/email/send";
 
 /**
  * Better Auth — self-hosted, data in our own Postgres via Prisma.
@@ -22,15 +24,66 @@ export const auth = betterAuth({
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 
+  /**
+   * Redis as secondary storage. Sessions and rate-limit counters live here
+   * instead of hitting Postgres on every authenticated request, and revocation
+   * becomes a DELETE that every app container sees immediately — the property
+   * a JWT cannot give us, and the reason ARCHITECTURE §6 lists Redis sessions.
+   */
+  secondaryStorage: {
+    get: async (key) => redis.get(key),
+    set: async (key, value, ttl) => {
+      if (ttl) await redis.set(key, value, "EX", ttl);
+      else await redis.set(key, value);
+    },
+    delete: async (key) => {
+      await redis.del(key);
+    },
+  },
+
+  /**
+   * Rate limiting on the auth endpoints themselves, shared across containers
+   * via Redis. Better Auth applies this to sign-in, sign-up, reset and verify —
+   * the endpoints where an unauthenticated stranger can guess at credentials.
+   */
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 30,
+    storage: "secondary-storage",
+    customRules: {
+      // Credential guessing is the attack that matters; keep these tight.
+      "/sign-in/email": { window: 15 * 60, max: 10 },
+      "/sign-up/email": { window: 60 * 60, max: 5 },
+      "/forget-password": { window: 60 * 60, max: 3 },
+      "/send-verification-email": { window: 60 * 60, max: 5 },
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
     minPasswordLength: 8,
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({ to: user.email, ...passwordResetEmail(user.name, url) });
+    },
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      // Queued, never sent inline — a slow provider must not become a slow
+      // signup, and a failed send must retry rather than vanish.
+      await sendEmail({ to: user.email, ...verificationEmail(user.name, url) });
+    },
   },
 
   user: {
     additionalFields: {
-      role: { type: "string", defaultValue: "parent", input: false },
+      // `role` is deliberately NOT declared here — the admin() plugin owns it
+      // ("user" | "admin"). Declaring it too made our default fight the
+      // plugin's, and the plugin wins at insert time.
       phone: { type: "string", required: false },
     },
   },

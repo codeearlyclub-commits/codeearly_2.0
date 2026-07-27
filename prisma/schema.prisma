@@ -188,6 +188,11 @@ model Program {
   priceKobo            Int           @default(0)
   regularPriceKobo     Int?
   capacity             Int?
+  /// Seats consumed. Maintained by an atomic conditional UPDATE rather than by
+  /// counting enrolments, so simultaneous registrations cannot oversell:
+  /// `SET seatsTaken = seatsTaken + 1 WHERE seatsTaken < capacity` either wins
+  /// or affects zero rows. A CHECK constraint backs it up in the database.
+  seatsTaken           Int           @default(0)
   startDate            DateTime?
   endDate              DateTime?
   registrationDeadline DateTime?

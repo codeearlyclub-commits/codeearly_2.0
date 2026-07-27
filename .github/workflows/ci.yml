@@ -67,6 +67,9 @@ jobs:
       - name: Invoice numbering stays gapless
         run: npx tsx scripts/check-invoice-numbering.ts
 
+      - name: Programs cannot be oversold
+        run: npx tsx scripts/check-program-capacity.ts
+
       - name: Typecheck
         run: npm run typecheck
 

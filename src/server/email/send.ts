@@ -113,6 +113,41 @@ export function studentLoginEmail(
   };
 }
 
+/**
+ * Payment receipt. Sent from the payment recording path, so it goes out for a
+ * webhook-confirmed payment and not merely because a browser came back to the
+ * callback URL claiming success.
+ */
+export function paymentReceiptEmail(
+  payerName: string,
+  invoiceNumber: string,
+  description: string,
+  amountFormatted: string,
+  paidAt: Date
+): Omit<SendEmailInput, "to"> {
+  const when = paidAt.toLocaleDateString("en-NG", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return {
+    kind: "payment-receipt",
+    subject: `Payment received — ${invoiceNumber}`,
+    html: layout(
+      "Thank you, payment received",
+      `<p style="line-height:1.6">Hi ${escapeHtml(payerName || "there")}, we've received your payment.</p>
+       <table style="margin:24px 0;font-size:15px">
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Invoice</td><td><b>${escapeHtml(invoiceNumber)}</b></td></tr>
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">For</td><td>${escapeHtml(description)}</td></tr>
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Amount</td><td><b>${escapeHtml(amountFormatted)}</b></td></tr>
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Date</td><td>${escapeHtml(when)}</td></tr>
+       </table>
+       <p style="font-size:13px;color:#6b7280">Keep this email as your receipt.</p>`
+    ),
+    text: `Hi ${payerName || "there"},\n\nWe've received your payment.\n\nInvoice: ${invoiceNumber}\nFor:     ${description}\nAmount:  ${amountFormatted}\nDate:    ${when}\n\nKeep this email as your receipt.\n\nCodeEarly Club`,
+  };
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!

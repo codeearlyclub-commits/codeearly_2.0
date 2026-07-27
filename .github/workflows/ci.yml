@@ -40,6 +40,10 @@ jobs:
       BETTER_AUTH_SECRET: ci-secret-not-used-for-anything-real
       BETTER_AUTH_URL: http://localhost:3000
       APP_URL: http://localhost:3000
+      # Not a real key. The webhook signature scheme is HMAC of the raw body,
+      # so valid signatures can be produced locally — which is what lets CI
+      # verify the money-protecting properties without contacting Paystack.
+      PAYSTACK_SECRET_KEY: sk_test_ci_placeholder_not_a_real_key
 
     steps:
       - uses: actions/checkout@v4
@@ -71,3 +75,15 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Runs against the built server, so it exercises the real route handler
+      # rather than a mock. These assertions are what stand between us and
+      # double-charging a parent or accepting a forged payment notification.
+      - name: Payment webhook contract
+        run: |
+          npm run start &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/api/health > /dev/null && break
+            sleep 2
+          done
+          npx tsx scripts/check-paystack-webhook.ts

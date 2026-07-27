@@ -18,6 +18,8 @@ import type { Invoice } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { formatNaira } from "@/lib/money";
+import { sendEmail, paymentReceiptEmail } from "@/server/email/send";
 
 const PAYSTACK_API = "https://api.paystack.co";
 
@@ -116,7 +118,17 @@ export async function verifyTransaction(reference: string) {
  */
 export function verifyWebhookSignature(rawBody: string, signature: string | null): boolean {
   if (!signature) return false;
-  const expected = createHmac("sha512", secretKey()).update(rawBody).digest("hex");
+
+  // Returns false rather than throwing when unconfigured. The webhook endpoint
+  // is public, so a missing key must produce a clean rejection, not a 500 with
+  // a stack trace — but it IS a misconfiguration, so say so loudly in the logs.
+  const key = process.env.PAYSTACK_SECRET_KEY;
+  if (!key) {
+    logger.error("PAYSTACK_SECRET_KEY is not set — rejecting webhook unverified");
+    return false;
+  }
+
+  const expected = createHmac("sha512", key).update(rawBody).digest("hex");
   const a = Buffer.from(expected, "utf8");
   const b = Buffer.from(signature, "utf8");
   return a.length === b.length && timingSafeEqual(a, b);
@@ -183,6 +195,23 @@ export async function recordSuccessfulPayment(input: {
       });
     }
   });
+
+  // Receipt goes out only from here — the webhook-confirmed path — so a
+  // browser hitting the callback URL can never trigger a receipt for money we
+  // have not actually seen. Enqueued after the transaction commits: a mail
+  // failure must not roll back a recorded payment.
+  if (invoice) {
+    await sendEmail({
+      to: input.customerEmail,
+      ...paymentReceiptEmail(
+        "",
+        invoice.invoiceNumber,
+        invoice.description,
+        formatNaira(invoice.amountKobo),
+        input.paidAt
+      ),
+    });
+  }
 
   return { recorded: true, invoiceNumber: invoice?.invoiceNumber };
 }

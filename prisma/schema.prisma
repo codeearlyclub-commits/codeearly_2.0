@@ -275,6 +275,19 @@ model Invoice {
   @@index([paystackReference])
 }
 
+/// Gapless counters, one row per sequence (e.g. "invoice:2026").
+///
+/// Deliberately NOT a Postgres sequence: nextval() does not roll back, so a
+/// failed transaction burns a number and leaves a hole in the invoice run.
+/// Accounting wants an unbroken series, so this row is locked FOR UPDATE inside
+/// the same transaction that writes the invoice — the increment lives or dies
+/// with it. The cost is that concurrent invoice creation serialises on this
+/// row, which at our volume is irrelevant.
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
 // Immutable ledger row — one per confirmed Paystack transaction.
 model Payment {
   id            String   @id @default(cuid())

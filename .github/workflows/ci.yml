@@ -60,6 +60,9 @@ jobs:
       - name: Seed (must be idempotent — runs on every deploy)
         run: npm run db:seed
 
+      - name: Invoice numbering stays gapless
+        run: npx tsx scripts/check-invoice-numbering.ts
+
       - name: Typecheck
         run: npm run typecheck
 

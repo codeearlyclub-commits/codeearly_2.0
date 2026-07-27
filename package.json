@@ -20,6 +20,11 @@
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
+  "//overrides": "next@16 still bundles postcss 8.4.31 and sharp 0.34.5, both carrying high-severity advisories (libvips CVEs in sharp; XSS + arbitrary file read in postcss). Forcing the patched versions here rather than waiting for Next to bump them. Revisit when a Next release ships them itself. Never run `npm audit fix --force` on this repo: it proposes next@9.3.3, a six-major downgrade.",
+  "overrides": {
+    "sharp": "^0.35.3",
+    "postcss": "^8.5.0"
+  },
   "dependencies": {
     "@prisma/client": "^6.3.0",
     "better-auth": "^1.1.0",

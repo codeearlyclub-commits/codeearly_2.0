@@ -1,0 +1,87 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   CodeEarly design tokens.
+
+   Ported from the V4 site so 2.0 looks like CodeEarly rather than a generic
+   dashboard — existing parents should recognise it. Every value here is the
+   real brand; the Phase 0 scaffold had guessed at two of them and got the navy
+   wrong (#0b1628 instead of #0D1B3E) with none of the kid palette at all.
+
+   These tokens are the single source of truth for the website, the parent
+   portal, the admin and the Capacitor app. One system, four surfaces.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Brand core ─────────────────────────────────────────────────────────── */
+  --navy: #0d1b3e;
+  --blue: #1a3c6e;
+  --blue-mid: #2454a0;
+  --green: #00c896;
+  --green-dark: #00a87e;
+  --green-light: #dcfaf2;
+  --green-mid: rgba(0, 200, 150, 0.2);
+
+  /* ── Kid palette ────────────────────────────────────────────────────────────
+     Not decoration: these carry meaning for children who cannot yet read
+     fluently. Each subject, course level and quiz state gets a colour, so a
+     seven-year-old can navigate by hue before they parse the label. */
+  --yellow: #ffd93d;
+  --yellow-light: #fffbeb;
+  --orange: #ff8c42;
+  --orange-light: #fff4eb;
+  --purple: #9b6dff;
+  --purple-light: #f5f0ff;
+  --pink: #ff6b9d;
+  --pink-light: #fff0f6;
+  --sky: #36b5e8;
+  --sky-light: #eff9ff;
+  --coral: #ff6b6b;
+
+  /* ── Neutrals ───────────────────────────────────────────────────────────── */
+  --white: #fafbff;
+  --off: #f5f3ff;
+  --bg-warm: #fffef5;
+  --text: #1a2540;
+  --muted: #5b6b8c;
+  --border: #e4e8f0;
+  --card: #ffffff;
+
+  /* ── Elevation ──────────────────────────────────────────────────────────── */
+  --shadow-sm: 0 2px 12px rgba(13, 27, 62, 0.07);
+  --shadow-md: 0 8px 28px rgba(13, 27, 62, 0.11);
+  --shadow-lg: 0 16px 48px rgba(13, 27, 62, 0.14);
+
+  /* ── Radii ────────────────────────────────────────────────────────────────
+     Generous on purpose. Rounded shapes read as friendly and safe; sharp
+     corners read as institutional. */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* ── Type ─────────────────────────────────────────────────────────────────
+     Nunito for display (rounded terminals, warm), Plus Jakarta Sans for body
+     (highly legible at small sizes). Loaded via next/font in layout.tsx —
+     self-hosted, so no render-blocking request to Google and no layout shift,
+     which V4's @import could not avoid. */
+  --font-display: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Layout ─────────────────────────────────────────────────────────────── */
+  --nav-height: 70px;
+  --container: 1200px;
+}
+
+/* Respect a user's reduced-motion preference. Several kid-facing surfaces
+   (quiz reveals, cheers, confetti) animate heavily, and for a child with
+   vestibular sensitivity that is not a delight, it is a problem. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -31,8 +31,35 @@ The consequences are worth stating plainly:
 
 | Target | Needs |
 |---|---|
-| Android | Android Studio + SDK, JDK 17+ |
-| iOS | **macOS** with Xcode — cannot be built on Windows |
+| Android | Android Studio + SDK, JDK 17+ (both present on the dev machine) |
+| iOS | A Mac — **or** the `iOS build` GitHub Action, which rents one |
+
+### Building iOS without a Mac
+
+`.github/workflows/ios.yml` runs on a `macos-latest` runner, so no Apple
+hardware is needed. It triggers on `v*` tags or manually — **not** on every
+push, because GitHub bills macOS minutes at 10× the Linux rate on private repos
+and an iOS build would quietly become the most expensive thing in the repo.
+
+It degrades sensibly by design: with no signing secrets it does an **unsigned
+build**, which still proves the project compiles. That means it is useful before
+an Apple Developer account exists, rather than failing on signing and telling
+you nothing.
+
+To produce an installable build, add these repository secrets:
+
+| Secret | What |
+|---|---|
+| `IOS_P12_BASE64` | Distribution certificate, base64 |
+| `IOS_P12_PASSWORD` | Its password |
+| `IOS_PROVISIONING_PROFILE_BASE64` | Provisioning profile, base64 |
+| `APPSTORE_API_KEY_ID` / `_ISSUER_ID` / `_BASE64` | App Store Connect API key, for TestFlight |
+
+Unavoidable regardless of hardware: the **Apple Developer Program, $99/year**.
+
+> Capacitor 8 uses **Swift Package Manager**, not CocoaPods. There is no
+> `Podfile` and no `.xcworkspace` — `xcodebuild` targets `App.xcodeproj`
+> directly, and fetches plugin packages itself.
 
 ## First-time setup
 

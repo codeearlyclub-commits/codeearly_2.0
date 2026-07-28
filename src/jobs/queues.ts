@@ -23,7 +23,14 @@ export const QUEUES = {
 };
 
 // ── Job payload types (shared contract between producers and the worker) ──────
-export type EmailJob = { to: string; subject: string; html: string; text: string };
+export type EmailJob = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+  /** Where replies should go — e.g. a contact enquiry replies to the parent. */
+  replyTo?: string;
+};
 export type ReminderJob = { kind: "subscription-expiry" | "program-session" | "birthday" };
 export type QuizJob =
   | { kind: "finalize-result"; sessionId: string }

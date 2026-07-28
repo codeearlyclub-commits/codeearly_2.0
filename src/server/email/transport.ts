@@ -39,6 +39,7 @@ export type DeliverInput = {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
 };
 
 // ── Resend ───────────────────────────────────────────────────────────────────
@@ -56,6 +57,7 @@ async function deliverViaResend(input: DeliverInput): Promise<string> {
       subject: input.subject,
       html: input.html,
       text: input.text,
+      ...(input.replyTo ? { reply_to: input.replyTo } : {}),
     }),
   });
 
@@ -105,6 +107,7 @@ async function deliverViaSmtp(input: DeliverInput): Promise<string> {
     subject: input.subject,
     text: input.text,
     html: input.html,
+    ...(input.replyTo ? { replyTo: input.replyTo } : {}),
   });
   return info.messageId;
 }

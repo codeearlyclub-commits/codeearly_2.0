@@ -40,12 +40,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      # REQUIRED. Without an explicit target, compose builds the LAST stage in
+      # the Dockerfile — which is `worker` — so the app silently ran the worker
+      # image and failed with "Could not find a production build in '.next'".
+      target: runner
     restart: unless-stopped
     env_file: .env
     environment:
       # Ensure the app talks to compose services, not localhost.
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
+      # .env carries NODE_ENV=development for host tooling; a container serving
+      # a production build must not inherit it.
+      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +73,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
+      NODE_ENV: production
     depends_on:
       postgres:
         condition: service_healthy

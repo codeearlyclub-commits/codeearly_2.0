@@ -44,8 +44,8 @@ Three would have reached production silently.
 
 | # | Item | Severity | Plan |
 |---|---|---|---|
-| 1 | **Email cannot send — `mail.codeearly.com` is not a mail server.** Transport is implemented (nodemailer, pooled, retried); the credentials from V4 fail. `mail.codeearly.com` resolves to `216.198.79.1`, a *web* host, and port 587 accepts a TCP connection but never sends an SMTP greeting — a wildcard DNS record catching the subdomain. Sending is opt-in outside production (`EMAIL_SEND=true`) and delivery failures still print the body, so local signup keeps working | **Blocking launch** | Needs the real SMTP host from whoever provides CodeEarly mail — see §5 |
-| 2 | Docker image never built or run | **High** | Being verified now; deployment is unproven until it is |
+| 1 | ~~Email cannot send~~ **RESOLVED.** Resend is primary (REST via `fetch`, no SDK), SMTP is fallback. Key valid, `codeearly.com` already verified, real test message delivered. The broken `mail.codeearly.com` SMTP host no longer matters — it is an unused fallback | Resolved | — |
+| 2 | ~~Docker never built or run~~ **RESOLVED.** Full stack verified: Caddy → Next.js → Postgres + Redis, `/api/health` returns `db: ok, redis: ok` over HTTPS, migrations applied on container start. Found and fixed a deployment-breaking bug in doing so: compose builds the *last* Dockerfile stage without an explicit `target`, so the `app` service was running the **worker** image and crash-looping on a missing production build | Resolved | Image is 1.33GB — switch to `output: "standalone"` when convenient |
 | 3 | 7 npm advisories, all dev-only ESLint tooling | Low | No production exposure; revisit when upstream fixes land |
 | 4 | Prisma 6 → 7 available; `package.json#prisma` config deprecated | Low | Do as its own change, not mid-phase |
 | 5 | `next build` fetches fonts from Google at build time | Low | Self-host woff2 if it keeps failing on flaky DNS |

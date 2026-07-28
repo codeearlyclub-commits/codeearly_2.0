@@ -1,36 +1,88 @@
 /**
- * Actual email delivery. Called only from the `email` BullMQ worker — never
- * from a request path, so a slow or failing mail server cannot become a slow
- * signup.
+ * Email delivery. Called only from the `email` BullMQ worker — never from a
+ * request path, so a slow or failing provider cannot become a slow signup.
  *
- * SMTP via nodemailer is the primary transport, because CodeEarly already owns
- * a mailbox on its own domain (mailer@codeearly.com) and mail from the domain
- * you actually own is what lands in inboxes. Resend can slot in later as a
- * higher-volume path; the queue makes swapping transports invisible to callers.
+ * Resend is the primary transport, with SMTP kept as a fallback exactly as
+ * ARCHITECTURE §3 describes. Two providers is not belt-and-braces for its own
+ * sake: transactional email is the single point of failure in signup, and the
+ * one thing that must never happen is a parent who cannot verify their address.
+ *
+ * Resend is called over its REST API with `fetch` rather than the `resend` SDK.
+ * The SDK is a wrapper over one HTTP POST, and on this project a dependency
+ * install is measured in hours — not a trade worth making for that.
  */
 import nodemailer, { type Transporter } from "nodemailer";
 
 import { logger } from "@/lib/logger";
 
-let cached: Transporter | null = null;
+const RESEND_API = "https://api.resend.com/emails";
 
-/** True when a transport is configured at all. */
-export function isEmailConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+export type EmailProvider = "resend" | "smtp" | null;
+
+/** Which transport will actually be used, in priority order. */
+export function activeProvider(): EmailProvider {
+  if (process.env.RESEND_API_KEY) return "resend";
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
+  return null;
 }
 
-/**
- * One pooled transporter for the worker's lifetime.
- *
- * Pooling matters: the worker sends with concurrency, and opening a fresh SMTP
- * connection per message is both slow and a good way to get rate-limited by
- * your own mail host.
- */
-function transporter(): Transporter {
-  if (cached) return cached;
+export function isEmailConfigured(): boolean {
+  return activeProvider() !== null;
+}
+
+function fromAddress(): string {
+  return process.env.SMTP_FROM || "CodeEarly Club <mailer@codeearly.com>";
+}
+
+export type DeliverInput = {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+};
+
+// ── Resend ───────────────────────────────────────────────────────────────────
+
+async function deliverViaResend(input: DeliverInput): Promise<string> {
+  const res = await fetch(RESEND_API, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: fromAddress(),
+      to: [input.to],
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+    }),
+  });
+
+  const body = (await res.json().catch(() => null)) as
+    | { id?: string; message?: string; name?: string }
+    | null;
+
+  if (!res.ok || !body?.id) {
+    // Surface Resend's own message — the common failures are a domain that is
+    // not verified yet, or a `from` address on a domain the key cannot use, and
+    // both are unguessable from a generic error.
+    const reason = body?.message || body?.name || `HTTP ${res.status}`;
+    throw new Error(`Resend rejected the message: ${reason}`);
+  }
+
+  return body.id;
+}
+
+// ── SMTP fallback ────────────────────────────────────────────────────────────
+
+let cachedSmtp: Transporter | null = null;
+
+function smtpTransport(): Transporter {
+  if (cachedSmtp) return cachedSmtp;
 
   const port = Number(process.env.SMTP_PORT || 587);
-  cached = nodemailer.createTransport({
+  cachedSmtp = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port,
     // `secure` means implicit TLS, which is port 465. On 587 the connection
@@ -43,43 +95,71 @@ function transporter(): Transporter {
     maxMessages: 50,
   });
 
-  return cached;
+  return cachedSmtp;
 }
 
-export type DeliverInput = {
-  to: string;
-  subject: string;
-  html: string;
-  text: string;
-};
-
-/**
- * Deliver one message. Throws on failure so BullMQ retries with backoff —
- * a transient mail-server hiccup should not lose a verification link.
- */
-export async function deliver(input: DeliverInput): Promise<string> {
-  const from = process.env.SMTP_FROM || "CodeEarly Club <mailer@codeearly.com>";
-
-  const info = await transporter().sendMail({
-    from,
+async function deliverViaSmtp(input: DeliverInput): Promise<string> {
+  const info = await smtpTransport().sendMail({
+    from: fromAddress(),
     to: input.to,
     subject: input.subject,
     text: input.text,
     html: input.html,
   });
-
-  logger.info({ to: input.to, messageId: info.messageId }, "email delivered");
   return info.messageId;
 }
 
-/** Confirms the SMTP credentials work, without sending anything. */
-export async function verifyTransport(): Promise<boolean> {
-  if (!isEmailConfigured()) return false;
+// ── Public API ───────────────────────────────────────────────────────────────
+
+/**
+ * Deliver one message. Throws on failure so BullMQ retries with backoff —
+ * a transient provider hiccup should not cost someone their verification link.
+ */
+export async function deliver(input: DeliverInput): Promise<string> {
+  const provider = activeProvider();
+  if (!provider) throw new Error("No email provider configured");
+
+  const id =
+    provider === "resend" ? await deliverViaResend(input) : await deliverViaSmtp(input);
+
+  logger.info({ to: input.to, provider, id }, "email delivered");
+  return id;
+}
+
+/**
+ * Checks the provider is usable without sending anything to a real person.
+ *
+ * Resend has no dedicated verify endpoint, so this lists domains — which fails
+ * on a bad key and, usefully, tells us whether the sending domain is verified.
+ */
+export async function verifyTransport(): Promise<{ ok: boolean; detail: string }> {
+  const provider = activeProvider();
+  if (!provider) return { ok: false, detail: "no provider configured" };
+
+  if (provider === "resend") {
+    const res = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+    });
+    if (!res.ok) {
+      return { ok: false, detail: `Resend API key rejected (HTTP ${res.status})` };
+    }
+    const body = (await res.json().catch(() => null)) as
+      | { data?: Array<{ name: string; status: string }> }
+      | null;
+    const domains = body?.data ?? [];
+    const verified = domains.filter((d) => d.status === "verified").map((d) => d.name);
+    return {
+      ok: true,
+      detail: verified.length
+        ? `key OK; verified domains: ${verified.join(", ")}`
+        : "key OK, but NO verified domain — you can only send to your own address until one is verified",
+    };
+  }
+
   try {
-    await transporter().verify();
-    return true;
+    await smtpTransport().verify();
+    return { ok: true, detail: "SMTP connection and credentials OK" };
   } catch (err) {
-    logger.error({ err }, "SMTP verification failed");
-    return false;
+    return { ok: false, detail: (err as Error).message };
   }
 }

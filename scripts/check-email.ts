@@ -1,8 +1,8 @@
 /**
- * Verifies the SMTP credentials actually work, and optionally sends a test.
+ * Verifies the email provider actually works, and optionally sends a test.
  *
- *   npx tsx scripts/check-email.ts              # verify connection only
- *   npx tsx scripts/check-email.ts you@mail.com # verify, then send there
+ *   npx tsx scripts/check-email.ts              # check credentials only
+ *   npx tsx scripts/check-email.ts you@mail.com # check, then send there
  *
  * Worth having as a script because a mail misconfiguration is invisible until a
  * real parent fails to receive a verification link — by which point they have
@@ -10,19 +10,21 @@
  */
 import "dotenv/config";
 
-import { isEmailConfigured, verifyTransport, deliver } from "@/server/email/transport";
+import { activeProvider, verifyTransport, deliver } from "@/server/email/transport";
 
 async function main() {
-  if (!isEmailConfigured()) {
-    console.error("✖ SMTP is not fully configured — need SMTP_HOST, SMTP_USER and SMTP_PASS");
+  const provider = activeProvider();
+  if (!provider) {
+    console.error("✖ No email provider configured.");
+    console.error("  Set RESEND_API_KEY (preferred), or SMTP_HOST + SMTP_USER + SMTP_PASS.");
     process.exit(1);
   }
 
-  console.log(`host: ${process.env.SMTP_HOST}:${process.env.SMTP_PORT ?? 587}`);
-  console.log(`from: ${process.env.SMTP_FROM}`);
+  console.log(`provider: ${provider}`);
+  console.log(`from:     ${process.env.SMTP_FROM}`);
 
-  const ok = await verifyTransport();
-  console.log(ok ? "✔ SMTP connection and credentials OK" : "✖ SMTP verification FAILED");
+  const { ok, detail } = await verifyTransport();
+  console.log(`${ok ? "✔" : "✖"} ${detail}`);
   if (!ok) process.exit(1);
 
   const to = process.argv[2];
@@ -31,13 +33,13 @@ async function main() {
     return;
   }
 
-  const messageId = await deliver({
+  const id = await deliver({
     to,
     subject: "CodeEarly 2.0 — test email",
     text: "If you can read this, CodeEarly 2.0 can send email.\n\nCodeEarly Club",
     html: "<p>If you can read this, <b>CodeEarly 2.0</b> can send email.</p><p>CodeEarly Club</p>",
   });
-  console.log(`✔ sent to ${to} (${messageId})`);
+  console.log(`✔ sent to ${to} (${id})`);
 }
 
 main().catch((err) => {

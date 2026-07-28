@@ -13,6 +13,7 @@ import { Worker, type Job } from "bullmq";
 // it must check its own config rather than assume the web container did.
 import "@/lib/env";
 import { bullConnection } from "@/lib/redis";
+import { deliver, isEmailConfigured } from "@/server/email/transport";
 import type { EmailJob, ReminderJob, QuizJob, BackupJob, PushJob } from "./queues";
 import { expireEndedSubscriptions } from "@/server/payments/subscriptions";
 import { expireLapsedOrgPlans } from "@/server/orgs/plans";
@@ -24,7 +25,19 @@ const workers: Worker[] = [];
 
 workers.push(
   new Worker<EmailJob>("email", async (job: Job<EmailJob>) => {
-    const configured = Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST);
+    // Checks that credentials are COMPLETE, not merely that a host is named.
+    // A half-configured transport previously sent the job down the "send" path
+    // where nothing was implemented — so mail was neither printed nor
+    // delivered, it simply vanished. Silent loss of a verification link is the
+    // worst of the three outcomes.
+    //
+    // Sending is opt-in outside production (EMAIL_SEND=true). Having working
+    // credentials on a developer's machine should not mean local signups start
+    // mailing real people, and it must not mean a broken mail host makes local
+    // signup impossible — the printed link is what keeps dev usable.
+    const wantsToSend =
+      process.env.NODE_ENV === "production" || process.env.EMAIL_SEND === "true";
+    const configured = isEmailConfigured() && wantsToSend;
 
     if (!configured) {
       // No provider yet. Print the full text body rather than swallowing it —
@@ -37,9 +50,18 @@ workers.push(
       return;
     }
 
-    log("email", `send → ${job.data.to} :: ${job.data.subject}`);
-    // TODO(Phase 2): Resend primary + SMTP (Brevo) fallback, provider rate
-    // limits. Needs the `resend` and `nodemailer` packages added first.
+    try {
+      const messageId = await deliver(job.data);
+      log("email", `sent → ${job.data.to} :: ${job.data.subject} (${messageId})`);
+    } catch (err) {
+      // Print the body before rethrowing. BullMQ will retry with backoff, but
+      // if the mail host is genuinely broken the retries will all fail — and
+      // the one thing we must not do is lose the verification link entirely
+      // while that is being fixed.
+      log("email", `DELIVERY FAILED → ${job.data.to} :: ${job.data.subject}`);
+      console.log(job.data.text);
+      throw err;
+    }
   }, { connection: bullConnection, concurrency: 5 })
 );
 

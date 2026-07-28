@@ -44,7 +44,7 @@ Three would have reached production silently.
 
 | # | Item | Severity | Plan |
 |---|---|---|---|
-| 1 | No email provider wired — verification links only print to the worker log | **Blocking launch** | SMTP creds exist in the V4 project; wire in 3A |
+| 1 | **Email cannot send — `mail.codeearly.com` is not a mail server.** Transport is implemented (nodemailer, pooled, retried); the credentials from V4 fail. `mail.codeearly.com` resolves to `216.198.79.1`, a *web* host, and port 587 accepts a TCP connection but never sends an SMTP greeting — a wildcard DNS record catching the subdomain. Sending is opt-in outside production (`EMAIL_SEND=true`) and delivery failures still print the body, so local signup keeps working | **Blocking launch** | Needs the real SMTP host from whoever provides CodeEarly mail — see §5 |
 | 2 | Docker image never built or run | **High** | Being verified now; deployment is unproven until it is |
 | 3 | 7 npm advisories, all dev-only ESLint tooling | Low | No production exposure; revisit when upstream fixes land |
 | 4 | Prisma 6 → 7 available; `package.json#prisma` config deprecated | Low | Do as its own change, not mid-phase |

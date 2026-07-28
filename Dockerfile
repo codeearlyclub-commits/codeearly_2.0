@@ -1,12 +1,20 @@
 # ── Base ─────────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 
 # ── Deps ─────────────────────────────────────────────────────────────────────
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Generous fetch timeouts and retries: npm's defaults give up on a slow or
+# flaky link, and `npm ci` here has failed twice with EIDLETIMEOUT after
+# 20 minutes of real downloading. Retrying the whole image build to recover
+# from one stalled socket is far more expensive than waiting longer per request.
+RUN npm config set fetch-timeout 900000 \
+ && npm config set fetch-retries 6 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 180000 \
+ && npm ci --no-audit --no-fund
 
 # ── Builder: prisma client + next build ──────────────────────────────────────
 FROM base AS builder

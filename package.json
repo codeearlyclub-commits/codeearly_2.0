@@ -28,6 +28,11 @@
     "postcss": "^8.5.0"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.2",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.4.2",
+    "@capacitor/push-notifications": "^8.1.2",
     "@prisma/client": "^6.3.0",
     "better-auth": "^1.1.0",
     "bullmq": "^5.34.0",
@@ -41,6 +46,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.2",
     "@eslint/eslintrc": "^3.3.6",
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^8.0.1",

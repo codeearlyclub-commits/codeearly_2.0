@@ -22,6 +22,19 @@ next-env.d.ts
 # docker volumes (if ever bind-mounted locally)
 /data
 
+# capacitor / android
+# The native project IS committed — it carries real configuration (permissions,
+# app id, plugin registration) that must not be regenerated differently on
+# another machine. Only build output and machine-local paths are ignored.
+/android/build
+/android/app/build
+/android/.gradle
+/android/local.properties
+/android/app/src/main/assets/public
+/android/capacitor-cordova-android-plugins
+/ios/App/Pods
+/ios/App/build
+
 # misc
 .DS_Store
 *.pem

@@ -14,10 +14,10 @@ retrofit — but it is now the thing to correct.
 
 | Surface | Built | Notes |
 |---|---|---|
-| Public website | **~0%** | Landing stub only. The data layer behind it exists |
+| Public website | **~75%** | Home, courses, programs (+ detail pages), about, contact — all verified in Docker behind Caddy. Missing: blog, showcase, events, SEO extras |
 | Parent portal | **~25%** | Auth, children, student codes. No invoices/courses/programs UI |
-| Admin | **0%** | Nothing. This is why no real content exists yet |
-| Mobile app | **0% shell** | No Capacitor project — but every endpoint already takes bearer tokens |
+| Admin | **0%** | Nothing. This is why content still comes from a seed script |
+| Mobile app | **~10%** | Capacitor config + docs. Loads the hosted portal (server-rendered, so no static export). Android buildable on this machine; **iOS needs a Mac** |
 | Quiz product | **~15%** | Tenancy, plans, entitlements, billing, join codes. No engine, no host UI |
 
 **Backend:** roughly Phase 3 of 6. **Visible product:** roughly Phase 1.

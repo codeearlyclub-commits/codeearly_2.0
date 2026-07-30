@@ -148,6 +148,37 @@ export function paymentReceiptEmail(
   };
 }
 
+/**
+ * A custom invoice raised by an admin — a private lesson, an extra session, a
+ * fee. Carries a link straight to the portal payments page, because "reply to
+ * arrange payment" is how invoices go unpaid.
+ */
+export function customInvoiceEmail(
+  parentName: string,
+  invoiceNumber: string,
+  description: string,
+  amountFormatted: string,
+  payUrl: string
+): Omit<SendEmailInput, "to"> {
+  return {
+    kind: "custom-invoice",
+    subject: `Invoice ${invoiceNumber} — ${amountFormatted}`,
+    html: layout(
+      "You have a new invoice",
+      `<p style="line-height:1.6">Hi ${escapeHtml(parentName || "there")},</p>
+       <p style="line-height:1.6">We've raised an invoice for you:</p>
+       <table style="margin:20px 0;font-size:15px">
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Invoice</td><td><b>${escapeHtml(invoiceNumber)}</b></td></tr>
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">For</td><td>${escapeHtml(description)}</td></tr>
+         <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Amount</td><td><b>${escapeHtml(amountFormatted)}</b></td></tr>
+       </table>
+       <p style="margin:24px 0"><a href="${escapeAttr(payUrl)}" style="background:#4f46e5;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;display:inline-block">Pay now</a></p>
+       <p style="font-size:13px;color:#6b7280">Or sign in to your portal and open Payments.</p>`
+    ),
+    text: `Hi ${parentName || "there"},\n\nWe've raised an invoice for you.\n\nInvoice: ${invoiceNumber}\nFor:     ${description}\nAmount:  ${amountFormatted}\n\nPay here: ${payUrl}\n\nCodeEarly Club`,
+  };
+}
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!

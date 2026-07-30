@@ -76,6 +76,12 @@ jobs:
       - name: Quiz engine rules hold
         run: npx tsx scripts/check-quiz-engine.ts
 
+      # The dangerous LMS failures are not crashes: a child losing progress,
+      # seeing a draft, or a completion timestamp that disagrees with what a
+      # report card later prints.
+      - name: LMS progress and access rules hold
+        run: npx tsx scripts/check-lms.ts
+
       - name: Unit tests
         run: npm test
 

@@ -136,6 +136,7 @@ model Child {
   quizParticipants   QuizParticipant[]
   invoices           Invoice[]
   subscriptions      Subscription[]
+  lessonProgress     LessonProgress[]
 
   @@index([parentId])
 }
@@ -163,6 +164,124 @@ model Course {
 
   enrollments   Enrollment[]
   programLinks  ProgramCourse[]
+  sections      CourseSection[]
+  lessons       Lesson[]
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LMS — what is actually INSIDE a course.
+//
+// Shaped to match V4, which imported from Moodle: course → section → lesson →
+// content. That keeps the eventual migration a mapping rather than a redesign.
+//
+// One deliberate departure: content is STRUCTURED BLOCKS, not raw HTML. V4
+// stored Moodle's HTML and sanitised it on the way out. Blocks remove the entire
+// XSS surface by construction — there is no markup to escape — and they force
+// consistent styling for children instead of whatever a copy-paste brought with
+// it. Migrating V4's HTML will need a converter; that is a fair price for not
+// serving unsanitised markup to a nine-year-old.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A chapter within a course. Optional: a short course can hold lessons directly.
+model CourseSection {
+  id       String  @id @default(cuid())
+  courseId String
+  course   Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title    String
+  summary  String?
+  order    Int     @default(0)
+
+  lessons Lesson[]
+
+  @@index([courseId])
+}
+
+enum LessonKind {
+  LESSON // taught content
+  PAGE // reference material
+  RESOURCE // a download or link
+  QUIZ // links to a Competition
+}
+
+model Lesson {
+  id        String        @id @default(cuid())
+  /// Denormalised alongside sectionId so "all lessons in this course" is one
+  /// query, and a lesson can exist without a section.
+  courseId  String
+  course    Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sectionId String?
+  section   CourseSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  title            String
+  slug             String
+  kind             LessonKind @default(LESSON)
+  summary          String?
+  order            Int        @default(0)
+  estimatedMinutes Int?
+  /// A LINK only. ARCHITECTURE §3: large video never lives in our storage —
+  /// YouTube-unlisted or Cloudflare Stream, and we keep the URL.
+  videoUrl         String?
+  /// Drafts are invisible to children, exactly as unpublished courses are.
+  published        Boolean    @default(false)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  blocks   LessonBlock[]
+  progress LessonProgress[]
+
+  @@unique([courseId, slug])
+  @@index([sectionId])
+  @@index([courseId, order])
+}
+
+enum BlockKind {
+  HEADING
+  TEXT
+  CODE
+  IMAGE
+  VIDEO
+  CALLOUT
+  LIST
+}
+
+/// One piece of lesson content. `text` is always plain text — never markup.
+model LessonBlock {
+  id       String    @id @default(cuid())
+  lessonId String
+  lesson   Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  kind     BlockKind @default(TEXT)
+  /// Plain text for TEXT/HEADING/CODE/CALLOUT; a URL for IMAGE/VIDEO; one item
+  /// per line for LIST.
+  text     String
+  /// Language for CODE, alt text for IMAGE, caption for VIDEO.
+  meta     String?
+  order    Int       @default(0)
+
+  @@index([lessonId, order])
+}
+
+enum ProgressStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+/// A child's progress through one lesson.
+model LessonProgress {
+  id        String         @id @default(cuid())
+  childId   String
+  child     Child          @relation(fields: [childId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  status    ProgressStatus @default(IN_PROGRESS)
+  /// Where they got to, so "continue" returns them to the right place rather
+  /// than the top of the lesson.
+  lastBlockOrder Int       @default(0)
+  startedAt   DateTime     @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([childId, lessonId])
+  @@index([lessonId])
 }
 
 model Enrollment {

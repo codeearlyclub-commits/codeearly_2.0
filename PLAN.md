@@ -52,6 +52,11 @@ Three would have reached production silently.
 | 6 | No e2e browser tests | Medium | Playwright once the portal has real screens |
 | 7 | ARCHITECTURE.md §11 roadmap is now stale | — | Superseded by this document |
 
+> **Superseded by [AUDIT.md](./AUDIT.md).** A count of the real surface showed
+> 2.0 covers only ~12% of V4's API routes and 14% of its admin sections: the
+> foundations are done, most of the product is not. Migration moves to LAST and
+> the LMS moves up. The section below is kept for its reasoning about ordering.
+
 ## 4. The replan
 
 The original roadmap put **the entire saleable quiz product in Phase 4, ahead of

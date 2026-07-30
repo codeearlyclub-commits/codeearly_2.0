@@ -1,0 +1,250 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Live quiz — host console and player screen.
+
+   Two very different readers: a projector at the back of a classroom, and a
+   nine-year-old holding a tablet. Both need scale, so type is large and hit
+   targets are big. Answer options are lettered A–D as well as coloured, because
+   colour alone excludes colour-blind children.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Host ─────────────────────────────────────────────────────────────────── */
+
+.host {
+  min-height: 100vh;
+  padding: 1.5rem clamp(1rem, 4vw, 3rem) 3rem;
+  background: var(--navy);
+  color: #fff;
+}
+.host h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+.host__bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+.host__meta { color: rgba(255, 255, 255, 0.6); font-size: 0.9rem; }
+.host__live { color: var(--green); font-weight: 800; }
+.host__down { color: var(--yellow); font-weight: 800; }
+
+/* Big enough to read from the back of a room — this is the one thing every
+   child needs off the projector. */
+.host__code { text-align: right; }
+.host__code span { display: block; font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); }
+.host__code b {
+  font-family: var(--font-jakarta), monospace;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  letter-spacing: 0.15em;
+  color: var(--green);
+  line-height: 1;
+}
+
+.host__stage { max-width: 60rem; margin: 2rem auto 0; text-align: center; }
+.host__progress { color: rgba(255, 255, 255, 0.6); font-weight: 700; }
+.host__question {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 4.5vw, 3rem);
+  line-height: 1.15;
+  margin: 0.75rem 0 1.5rem;
+}
+.host__timer {
+  font-family: var(--font-jakarta), monospace;
+  font-size: clamp(3rem, 9vw, 6rem);
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+.host__options {
+  list-style: none;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+@media (min-width: 700px) { .host__options { grid-template-columns: 1fr 1fr; } }
+.host__options li {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-weight: 600;
+}
+.host__letter,
+.play__letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--navy);
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.host__correct { color: var(--green); }
+
+.host__tally { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; margin: 1.5rem 0; text-align: left; }
+.host__tally li {
+  display: grid;
+  grid-template-columns: minmax(6rem, 14rem) 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+.host__tally li.is-correct { background: rgba(0, 200, 150, 0.22); }
+.host__bar { display: block; height: 0.75rem; border-radius: var(--radius-pill); background: var(--green); min-width: 2px; }
+
+.host__leaderboard { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin: 1.5rem 0; text-align: left; }
+.host__leaderboard li {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 0.9rem;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: var(--radius-sm);
+  font-size: 1.05rem;
+}
+.host__leaderboard li.is-first { background: rgba(255, 217, 61, 0.22); }
+.host__rank { font-weight: 900; color: var(--green); }
+.host__name { font-weight: 600; }
+
+.host__players { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin: 1.25rem 0; }
+.host__players li {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-pill);
+  padding: 0.35rem 0.9rem;
+  font-weight: 600;
+}
+
+.host__actions { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-top: 1.5rem; }
+.host .btn--ghost { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+
+/* ── Player ───────────────────────────────────────────────────────────────── */
+
+.play {
+  min-height: 100vh;
+  padding: 1.25rem;
+  background: var(--off);
+  display: flex;
+  flex-direction: column;
+}
+.play--join { align-items: center; justify-content: center; text-align: center; }
+.play h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
+  color: var(--navy);
+}
+.play__lead { color: var(--muted); margin: 0.5rem 0 1.5rem; }
+
+.play__form { display: flex; flex-direction: column; gap: 1rem; width: 100%; max-width: 22rem; text-align: left; }
+.play__form label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 700; color: var(--navy); }
+.play__form input {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.85rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+/* Big and spaced: this is typed off a projector, in a hurry, by a child. */
+.play__code {
+  font-family: var(--font-jakarta), monospace !important;
+  font-size: 1.8rem !important;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.play__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.play__me { font-weight: 800; color: var(--navy); }
+.play__score { margin-left: auto; font-weight: 900; color: var(--green-dark); font-size: 1.1rem; }
+.play__reconnect { font-size: 0.8rem; color: var(--orange); font-weight: 700; }
+
+.play__stage { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 1.5rem 0; }
+.play__timer {
+  font-family: var(--font-jakarta), monospace;
+  font-size: clamp(2.5rem, 12vw, 4rem);
+  font-weight: 700;
+  color: var(--green-dark);
+  line-height: 1;
+}
+.play__question {
+  font-size: clamp(1.3rem, 5.5vw, 2rem) !important;
+  line-height: 1.2;
+  margin: 0.75rem 0 1.5rem;
+}
+
+.play__options { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
+@media (min-width: 560px) { .play__options { grid-template-columns: 1fr 1fr; } }
+
+/* Deliberately large: a child taps this in a hurry, sometimes one-handed. */
+.play__option {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-align: left;
+  padding: 1.1rem 1.25rem;
+  min-height: 4rem;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+}
+.play__option--0 { border-color: var(--sky); }
+.play__option--1 { border-color: var(--orange); }
+.play__option--2 { border-color: var(--purple); }
+.play__option--3 { border-color: var(--pink); }
+.play__option--4 { border-color: var(--yellow); }
+.play__option--5 { border-color: var(--coral); }
+.play__option.is-chosen { background: var(--green-light); border-color: var(--green); }
+.play__option:disabled { opacity: 0.55; cursor: default; }
+
+.play__locked { margin-top: 1.25rem; font-weight: 700; color: var(--green-dark); }
+.play__cheer { display: block; font-weight: 800; color: var(--navy); margin-top: 0.35rem; }
+
+.play__right { color: var(--green-dark); }
+.play__wrong { color: var(--orange); }
+
+.play__leaderboard { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; margin: 1.25rem 0; text-align: left; }
+.play__leaderboard li {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0.85rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+.play__leaderboard li.is-me { background: var(--green-light); border-color: var(--green); }
+
+@media (prefers-reduced-motion: reduce) {
+  .play__option, .host__bar { transition: none; }
+}

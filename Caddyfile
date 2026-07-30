@@ -6,6 +6,15 @@
 
 {$SITE_DOMAIN} {
 	encode gzip zstd
+
+	# Socket.io must reach the realtime process, not the web app. Matched first
+	# because the catch-all below would otherwise swallow it, and a websocket
+	# handed to Next.js simply fails to upgrade.
+	@socketio path /socket.io/*
+	handle @socketio {
+		reverse_proxy realtime:3001
+	}
+
 	reverse_proxy app:3000
 
 	# Security headers (mirrors what we hardened in V4)

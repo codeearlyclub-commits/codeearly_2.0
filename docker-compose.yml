@@ -81,6 +81,31 @@ services:
         condition: service_healthy
     command: ["node_modules/.bin/tsx", "src/jobs/worker.ts"]
 
+  # Socket.io lives in its own process: Next route handlers have nowhere to keep
+  # a long-lived socket, and a quiz with 200 children in it must not starve the
+  # web app of event-loop time. The Redis adapter shares rooms between
+  # instances, so scaling out joins the same quiz rather than hosting a rival one.
+  realtime:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+      REALTIME_PORT: 3001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["node_modules/.bin/tsx", "src/realtime/server.ts"]
+    expose:
+      - "3001"
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped

@@ -8,6 +8,8 @@
     "start": "next start -p 3000",
     "worker": "tsx src/jobs/worker.ts",
     "worker:dev": "tsx watch src/jobs/worker.ts",
+    "realtime": "tsx src/realtime/server.ts",
+    "realtime:dev": "tsx watch src/realtime/server.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -35,6 +37,7 @@
     "@capacitor/ios": "^8.4.2",
     "@capacitor/push-notifications": "^8.1.2",
     "@prisma/client": "^6.3.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "better-auth": "^1.1.0",
     "bullmq": "^5.34.0",
     "dotenv": "^16.4.7",
@@ -44,6 +47,8 @@
     "pino": "^9.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {

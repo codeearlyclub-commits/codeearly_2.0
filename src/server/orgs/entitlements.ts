@@ -35,9 +35,20 @@ const LAPSED_FALLBACK: EffectiveLimits = {
   allowCustomBranding: false,
 };
 
+/**
+ * "Unlimited" as a number that fits in a 32-bit column.
+ *
+ * Number.MAX_SAFE_INTEGER (2^53) was used here first, and it broke opening any
+ * CodeEarly-hosted room: this value is SNAPSHOTTED onto
+ * `QuizSession.maxPlayers`, which is INT4, and Postgres rejected the insert.
+ * A million players is unreachable for a live quiz while still being storable —
+ * the sentinel has to survive being written down, not just compared against.
+ */
+const EFFECTIVELY_UNLIMITED = 1_000_000;
+
 const UNLIMITED: EffectiveLimits = {
-  maxPlayersPerSession: Number.MAX_SAFE_INTEGER,
-  maxQuestionsPerQuiz: Number.MAX_SAFE_INTEGER,
+  maxPlayersPerSession: EFFECTIVELY_UNLIMITED,
+  maxQuestionsPerQuiz: EFFECTIVELY_UNLIMITED,
   maxSessionsPerMonth: null,
   allowPdfExport: true,
   allowCustomBranding: true,

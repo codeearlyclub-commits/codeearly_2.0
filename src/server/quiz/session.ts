@@ -22,11 +22,20 @@ import { allocateJoinCode, releaseJoinCode } from "@/server/quiz/join-code";
 import { assertRoomHasSpace, effectiveLimits, assertCanHost } from "@/server/orgs/entitlements";
 import { scoreAnswer, rankLeaderboard, deadlineFor, isExpired } from "@/server/quiz/scoring";
 
-/** Which phases each action is legal from. */
+/**
+ * Which phases each action is legal from.
+ *
+ * `next` is allowed from ACTIVE as well as REVEALED. Revealing first is the
+ * normal path and the pedagogically useful one — children should see the answer
+ * — but a host needs an escape hatch for a question with a typo in it, or one
+ * the room has clearly already finished. Skipping the reveal is the host's
+ * judgement to make in the moment, not something the engine should forbid from
+ * a distance.
+ */
 const ALLOWED_FROM: Record<string, QuizPhase[]> = {
   start: ["LOBBY"],
   reveal: ["ACTIVE"],
-  next: ["REVEALED", "LOBBY"],
+  next: ["ACTIVE", "REVEALED", "LOBBY"],
   end: ["LOBBY", "ACTIVE", "REVEALED"],
 };
 

@@ -70,6 +70,12 @@ jobs:
       - name: Programs cannot be oversold
         run: npx tsx scripts/check-program-capacity.ts
 
+      # Drives a whole quiz through the state machine. No socket involved: this
+      # asserts the AUTHORITY, and clients can only ask the server to do these
+      # things, so if the rules hold here they hold for every client.
+      - name: Quiz engine rules hold
+        run: npx tsx scripts/check-quiz-engine.ts
+
       - name: Unit tests
         run: npm test
 

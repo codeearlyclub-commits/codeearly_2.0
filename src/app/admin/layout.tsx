@@ -31,6 +31,10 @@ const NAV = [
     ],
   },
   {
+    group: "Live",
+    items: [{ href: "/admin/competitions", label: "Quizzes" }],
+  },
+  {
     group: "People",
     items: [{ href: "/admin/members", label: "Members" }],
   },

@@ -28,6 +28,7 @@ import {
   saveLessonPosition,
   listChildLearning,
 } from "@/server/lms/learning";
+import { recordEngagement, recentActivity, learningSummary } from "@/server/lms/tracking";
 import { isAppError } from "@/lib/errors";
 
 const PARENT_ID = "lms-check-parent";
@@ -184,13 +185,21 @@ async function main() {
 
   // ── Completion ─────────────────────────────────────────────────────────────
   const done = await completeLesson(child.id, l1.id);
-  check("completion sets a timestamp", done.status === "COMPLETED" && done.completedAt !== null);
+  check(
+    "completion sets a timestamp",
+    done.progress.status === "COMPLETED" && done.progress.completedAt !== null
+  );
+  // One of two lessons done, so the COURSE is not finished yet.
+  check("course not completed while a lesson remains", done.courseCompleted === null);
 
-  const firstAt = done.completedAt!.getTime();
+  const firstAt = done.progress.completedAt!.getTime();
   await new Promise((r) => setTimeout(r, 30));
   const again = await completeLesson(child.id, l1.id);
   // When they finished is a fact, not something a second click rewrites.
-  check("completing twice keeps the first timestamp", again.completedAt!.getTime() === firstAt);
+  check(
+    "completing twice keeps the first timestamp",
+    again.progress.completedAt!.getTime() === firstAt
+  );
 
   // Re-reading something you finished must not undo the record.
   await getLessonForChild(child.id, PARENT_ID, SLUG, l1.slug);
@@ -205,6 +214,59 @@ async function main() {
 
   const dash = await listChildLearning(child.id);
   check("dashboard reports the same progress", dash[0]?.percentComplete === 50, `${dash[0]?.percentComplete}%`);
+
+  // ── Tracking ───────────────────────────────────────────────────────────────
+  await recordEngagement(child.id, l1.id, 45);
+  await recordEngagement(child.id, l1.id, 30);
+  const engaged = await prisma.lessonProgress.findUnique({
+    where: { childId_lessonId: { childId: child.id, lessonId: l1.id } },
+  });
+  check("engaged time accumulates", engaged?.timeSpentSeconds === 75, `${engaged?.timeSpentSeconds}s`);
+
+  // A tab left open overnight must not report eight hours of study on a report
+  // card, so a single heartbeat is clamped.
+  await recordEngagement(child.id, l1.id, 999_999);
+  const clamped = await prisma.lessonProgress.findUnique({
+    where: { childId_lessonId: { childId: child.id, lessonId: l1.id } },
+  });
+  check(
+    "an implausible heartbeat is clamped",
+    clamped!.timeSpentSeconds === 75 + 120,
+    `${clamped!.timeSpentSeconds}s`
+  );
+
+  // Finishing the last lesson completes the course.
+  const finished = await completeLesson(child.id, l2.id);
+  check("finishing the last lesson completes the course", finished.courseCompleted !== null);
+  check(
+    "completion records how many lessons it covered",
+    finished.courseCompleted?.lessonCount === 2,
+    String(finished.courseCompleted?.lessonCount)
+  );
+
+  // Publishing another lesson later must not un-complete a finished course, or
+  // invalidate a certificate already in a frame.
+  await createLesson(course.id, {
+    title: "Bonus lesson added later",
+    kind: "LESSON",
+    published: true,
+    blocks: [{ kind: "TEXT", text: "Added after the fact." }],
+  });
+  const stillComplete = await prisma.courseCompletion.findUnique({
+    where: { childId_courseId: { childId: child.id, courseId: course.id } },
+  });
+  check("a later lesson does not un-complete the course", stillComplete !== null);
+
+  const feed = await recentActivity(child.id);
+  const kinds = feed.map((f) => f.kind);
+  check("activity log recorded lesson starts", kinds.includes("LESSON_STARTED"));
+  check("activity log recorded completions", kinds.includes("LESSON_COMPLETED"));
+  check("activity log recorded course completion", kinds.includes("COURSE_COMPLETED"));
+
+  const summary = await learningSummary(child.id);
+  check("summary counts completed lessons", summary.lessonsCompleted === 2, String(summary.lessonsCompleted));
+  check("summary counts completed courses", summary.coursesCompleted === 1);
+  check("summary reports minutes", summary.totalMinutes === 3, `${summary.totalMinutes} min`);
 
   // ── Destructive edits must not erase history ───────────────────────────────
   const removal = await removeLesson(l1.id);

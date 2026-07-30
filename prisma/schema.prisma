@@ -137,6 +137,8 @@ model Child {
   invoices           Invoice[]
   subscriptions      Subscription[]
   lessonProgress     LessonProgress[]
+  courseCompletions  CourseCompletion[]
+  activity           LearningActivity[]
 
   @@index([parentId])
 }
@@ -166,6 +168,7 @@ model Course {
   programLinks  ProgramCourse[]
   sections      CourseSection[]
   lessons       Lesson[]
+  completions   CourseCompletion[]
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,12 +279,71 @@ model LessonProgress {
   /// Where they got to, so "continue" returns them to the right place rather
   /// than the top of the lesson.
   lastBlockOrder Int       @default(0)
-  startedAt   DateTime     @default(now())
-  completedAt DateTime?
-  updatedAt   DateTime     @updatedAt
+  /// Accumulated engaged time. Reported to parents and on report cards, so it
+  /// counts time the lesson was actually open and focused — not wall-clock time
+  /// since a tab was left open overnight.
+  timeSpentSeconds Int     @default(0)
+  startedAt    DateTime    @default(now())
+  lastAccessAt DateTime    @default(now())
+  completedAt  DateTime?
+  updatedAt    DateTime    @updatedAt
 
   @@unique([childId, lessonId])
   @@index([lessonId])
+  @@index([childId, lastAccessAt])
+}
+
+/// A child finished every published lesson in a course.
+///
+/// Stored rather than derived: it is the fact a certificate attests to, and
+/// publishing one more lesson later must not retroactively un-complete a course
+/// a child already finished — or invalidate a certificate already in a frame.
+model CourseCompletion {
+  id          String   @id @default(cuid())
+  childId     String
+  child       Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  /// How many lessons the course had at the moment of completion, so the record
+  /// stays truthful about what was actually finished.
+  lessonCount Int
+
+  @@unique([childId, courseId])
+  @@index([courseId])
+}
+
+enum ActivityKind {
+  LESSON_STARTED
+  LESSON_COMPLETED
+  COURSE_COMPLETED
+  QUIZ_PLAYED
+  PROGRAM_ATTENDED
+}
+
+/// Append-only record of learning activity.
+///
+/// FIRST-PARTY ONLY. There is deliberately no third-party analytics anywhere
+/// near children: Apple's Kids Category and Google Play's Families policy both
+/// restrict it, and it is the wrong thing to do regardless. This table exists to
+/// show a parent what their child did and to build report cards from — not to
+/// profile anyone.
+///
+/// Never updated, only inserted, so the history cannot be quietly rewritten.
+model LearningActivity {
+  id        String       @id @default(cuid())
+  childId   String
+  child     Child        @relation(fields: [childId], references: [id], onDelete: Cascade)
+  kind      ActivityKind
+  courseId  String?
+  lessonId  String?
+  /// Human-readable label captured at the time, so the feed still reads correctly
+  /// after a lesson is renamed or removed.
+  label     String
+  createdAt DateTime     @default(now())
+
+  @@index([childId, createdAt])
+  @@index([courseId])
 }
 
 model Enrollment {

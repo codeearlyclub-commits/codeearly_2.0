@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/prisma";
 import { errors } from "@/lib/errors";
 import { checkCourseAccess } from "@/server/courses/catalog";
+import { logActivity, checkCourseCompletion } from "@/server/lms/tracking";
 
 /**
  * The course as a child sees it: published lessons only, with their own progress.
@@ -159,13 +160,37 @@ export async function getLessonForChild(
 
 /** Record that a child opened a lesson. Idempotent. */
 export async function startLesson(childId: string, lessonId: string) {
-  return prisma.lessonProgress.upsert({
+  const before = await prisma.lessonProgress.findUnique({
+    where: { childId_lessonId: { childId, lessonId } },
+    select: { id: true },
+  });
+
+  const progress = await prisma.lessonProgress.upsert({
     where: { childId_lessonId: { childId, lessonId } },
     create: { childId, lessonId, status: "IN_PROGRESS" },
     // Deliberately does NOT reset a completed lesson back to in-progress.
     // Re-reading something you finished is normal and must not undo the record.
-    update: {},
+    // Only the access time moves.
+    update: { lastAccessAt: new Date() },
   });
+
+  // Logged once, on genuinely first opening — not on every revisit, which would
+  // bury a parent's feed in noise.
+  if (!before) {
+    const lesson = await prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { title: true, courseId: true },
+    });
+    await logActivity({
+      childId,
+      kind: "LESSON_STARTED",
+      label: lesson?.title ?? "a lesson",
+      courseId: lesson?.courseId,
+      lessonId,
+    });
+  }
+
+  return progress;
 }
 
 /** Remember how far through a lesson a child scrolled. */
@@ -197,7 +222,7 @@ export async function saveLessonPosition(childId: string, lessonId: string, bloc
 export async function completeLesson(childId: string, lessonId: string) {
   const lesson = await prisma.lesson.findFirst({
     where: { id: lessonId, published: true },
-    select: { id: true },
+    select: { id: true, title: true, courseId: true },
   });
   if (!lesson) throw errors.notFound("Lesson not found.");
 
@@ -207,13 +232,29 @@ export async function completeLesson(childId: string, lessonId: string) {
 
   // Completing twice keeps the FIRST timestamp. When they finished it is a fact,
   // not something a second click should rewrite.
-  if (existing?.status === "COMPLETED") return existing;
+  if (existing?.status === "COMPLETED") {
+    return { progress: existing, courseCompleted: null };
+  }
 
-  return prisma.lessonProgress.upsert({
+  const progress = await prisma.lessonProgress.upsert({
     where: { childId_lessonId: { childId, lessonId } },
     create: { childId, lessonId, status: "COMPLETED", completedAt: new Date() },
     update: { status: "COMPLETED", completedAt: new Date() },
   });
+
+  await logActivity({
+    childId,
+    kind: "LESSON_COMPLETED",
+    label: lesson.title,
+    courseId: lesson.courseId,
+    lessonId,
+  });
+
+  // Returned so the UI can celebrate a finished course rather than silently
+  // moving on — this is the moment worth marking for a child.
+  const courseCompleted = await checkCourseCompletion(childId, lesson.courseId);
+
+  return { progress, courseCompleted };
 }
 
 /** Every enrolled course with progress — the child's dashboard. */

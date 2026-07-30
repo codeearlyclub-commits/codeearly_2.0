@@ -47,7 +47,7 @@ export function ContactForm() {
 
   if (state === "sent") {
     return (
-      <div className="notice">
+      <div className="x-ok">
         <h2>Thank you — message received</h2>
         <p>We&apos;ll reply to the email address you gave us, usually within a day.</p>
       </div>
@@ -55,7 +55,7 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="contact-form">
+    <form onSubmit={onSubmit} className="x-form">
       <label>
         Your name
         <input name="name" type="text" required minLength={2} maxLength={80} autoComplete="name" />
@@ -67,7 +67,7 @@ export function ContactForm() {
       </label>
 
       <label>
-        Phone <span className="muted">(optional)</span>
+        Phone <span className="x-note">(optional)</span>
         <input name="phone" type="tel" maxLength={40} autoComplete="tel" />
       </label>
 
@@ -76,16 +76,16 @@ export function ContactForm() {
         <textarea name="message" required minLength={10} maxLength={2000} rows={6} />
       </label>
 
-      <div className="honeypot" aria-hidden="true">
+      <div className="x-honey" aria-hidden="true">
         <label>
           Leave this empty
           <input name="website" type="text" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
 
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && <p role="alert" className="x-error">{error}</p>}
 
-      <button type="submit" className="btn btn--primary" disabled={state === "sending"}>
+      <button type="submit" className="btn-primary" disabled={state === "sending"}>
         {state === "sending" ? "Sending…" : "Send message"}
       </button>
     </form>

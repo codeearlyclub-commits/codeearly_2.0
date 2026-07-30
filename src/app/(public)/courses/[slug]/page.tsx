@@ -44,9 +44,9 @@ export default async function CoursePage({ params }: Props) {
 
   return (
     <>
-      <section className="page-head">
-        <div className="container">
-          <p className="breadcrumb">
+      <section className="x-head">
+        <div className="x-wrap">
+          <p className="x-crumb">
             <Link href="/courses">← All courses</Link>
           </p>
           {course.level && <span className="tag">{course.level}</span>}
@@ -55,9 +55,9 @@ export default async function CoursePage({ params }: Props) {
         </div>
       </section>
 
-      <section className="section">
-        <div className="container detail-grid">
-          <div className="prose">
+      <section className="x-sec">
+        <div className="x-wrap x-detail">
+          <div className="x-prose">
             <h2>What your child will learn</h2>
             <p>
               This course is taught step by step, with a project at the end that
@@ -74,12 +74,12 @@ export default async function CoursePage({ params }: Props) {
             </p>
           </div>
 
-          <aside className="detail-aside">
-            <div className="price-card">
-              <p className="price-card__price">
+          <aside className="x-aside">
+            <div className="x-card">
+              <p className="x-price">
                 {course.requiresSubscription ? "Members only" : formatPrice(course.priceKobo)}
               </p>
-              <dl className="facts facts--stack">
+              <dl className="x-facts">
                 {course.ageRange && (
                   <div>
                     <dt>Ages</dt>
@@ -94,10 +94,10 @@ export default async function CoursePage({ params }: Props) {
                 )}
               </dl>
 
-              <Link href="/register" className="btn btn--primary btn--lg">
+              <Link href="/register" className="btn-primary">
                 {course.requiresSubscription ? "Join the club" : "Enrol your child"}
               </Link>
-              <p className="muted">
+              <p className="x-note">
                 Already a member? <Link href="/login">Sign in</Link> to enrol from
                 your portal.
               </p>

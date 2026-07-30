@@ -1,0 +1,10 @@
+{
+  "name": "CodeEarly",
+  "short_name": "CodeEarly",
+  "description": "Kids coding classes, STEM programs, and creative technology learning.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7ff",
+  "theme_color": "#061224",
+  "icons": []
+}

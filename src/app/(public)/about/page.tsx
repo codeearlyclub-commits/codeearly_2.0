@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <section className="page-head">
-        <div className="container">
+      <section className="x-head">
+        <div className="x-wrap">
           <h1>About CodeEarly Club</h1>
           <p>
             We teach children to build things with code — and to believe they
@@ -20,7 +20,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="x-sec">
         <div className="container prose">
           <h2>Why we exist</h2>
           <p>
@@ -63,7 +63,7 @@ export default function AboutPage() {
           </p>
 
           <p>
-            <Link href="/programs" className="btn btn--primary">
+            <Link href="/programs" className="btn-primary">
               See upcoming programs
             </Link>
           </p>

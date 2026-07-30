@@ -59,28 +59,28 @@ export default async function ProgramPage({ params }: Props) {
 
   return (
     <>
-      <section className="page-head">
-        <div className="container">
-          <p className="breadcrumb">
+      <section className="x-head">
+        <div className="x-wrap">
+          <p className="x-crumb">
             <Link href="/programs">← All programs</Link>
           </p>
-          <span className="tag tag--warm">{program.type}</span>
+          <span className="tag">{program.type}</span>
           <h1>{program.title}</h1>
           {program.description && <p>{program.description}</p>}
         </div>
       </section>
 
-      <section className="section">
-        <div className="container detail-grid">
-          <div className="prose">
+      <section className="x-sec">
+        <div className="x-wrap x-detail">
+          <div className="x-prose">
             {program.sessions.length > 0 && (
               <>
                 <h2>Schedule</h2>
-                <ol className="schedule">
+                <ol className="x-schedule">
                   {program.sessions.map((session) => (
                     <li key={session.id}>
                       <b>{session.title}</b>
-                      <span className="muted">{dateFmt.format(session.date)}</span>
+                      <span className="x-note">{dateFmt.format(session.date)}</span>
                     </li>
                   ))}
                 </ol>
@@ -90,12 +90,12 @@ export default async function ProgramPage({ params }: Props) {
             {program.courses.length > 0 && (
               <>
                 <h2>Courses included</h2>
-                <ul className="included">
+                <ul className="x-tags">
                   {program.courses.map((link) => (
                     <li key={link.id}>{link.course.title}</li>
                   ))}
                 </ul>
-                <p className="muted">
+                <p className="x-note">
                   These are unlocked for your child for the duration of the
                   program.
                 </p>
@@ -110,19 +110,19 @@ export default async function ProgramPage({ params }: Props) {
             </p>
           </div>
 
-          <aside className="detail-aside">
-            <div className="price-card">
-              <p className="price-card__price">
+          <aside className="x-aside">
+            <div className="x-card">
+              <p className="x-price">
                 {formatPrice(program.priceKobo)}
                 {program.regularPriceKobo !== null &&
                   program.regularPriceKobo > program.priceKobo && (
-                    <span className="price-card__was">
+                    <span className="x-was">
                       {formatPrice(program.regularPriceKobo)}
                     </span>
                   )}
               </p>
 
-              <dl className="facts facts--stack">
+              <dl className="x-facts">
                 {program.startDate && (
                   <div>
                     <dt>Starts</dt>
@@ -160,17 +160,17 @@ export default async function ProgramPage({ params }: Props) {
               </p>
 
               {bookable ? (
-                <Link href="/register" className="btn btn--primary btn--lg">
+                <Link href="/register" className="btn-primary">
                   Register your child
                 </Link>
               ) : (
                 // No dead "Register" button on something nobody can join.
-                <Link href="/contact" className="btn btn--ghost btn--lg">
+                <Link href="/contact" className="btn-secondary">
                   Ask about the next one
                 </Link>
               )}
 
-              <p className="muted">
+              <p className="x-note">
                 Already a member? <Link href="/login">Sign in</Link> to register
                 from your portal.
               </p>

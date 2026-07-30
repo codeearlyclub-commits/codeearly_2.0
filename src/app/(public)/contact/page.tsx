@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <section className="page-head">
-        <div className="container">
+      <section className="x-head">
+        <div className="x-wrap">
           <h1>Talk to us</h1>
           <p>
             Questions about which course suits your child, how programs run, or
@@ -21,11 +21,11 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="section">
-        <div className="container contact-grid">
+      <section className="x-sec">
+        <div className="x-wrap contact-grid">
           <ContactForm />
 
-          <aside className="contact-aside">
+          <aside className="x-note-col">
             <h2>Other ways to reach us</h2>
             <p>
               <b>Email</b>

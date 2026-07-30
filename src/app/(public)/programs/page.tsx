@@ -1,15 +1,16 @@
 /**
- * Programs — cohort offerings like the holiday Bootcamp.
+ * Programs — V4's design, live data.
  *
- * Seat counts are shown only where a capacity actually exists. A permanent
- * "few seats left" on an uncapped program is the kind of small dishonesty
- * parents notice and remember.
+ * Seat counts appear only where a capacity actually exists. A permanent "few
+ * seats left" on an uncapped program is the kind of small dishonesty parents
+ * notice, and it devalues the message when a program genuinely is nearly full.
  */
 import type { Metadata } from "next";
 import Link from "next/link";
 
 import { listPublicPrograms } from "@/server/programs/programs";
 import { formatPrice } from "@/lib/money";
+import { CtaBanner } from "@/components/site/SitePrimitives";
 
 export const metadata: Metadata = {
   title: "Programs",
@@ -21,7 +22,7 @@ export const dynamic = "force-dynamic";
 
 const dateFmt = new Intl.DateTimeFormat("en-NG", {
   day: "numeric",
-  month: "short",
+  month: "long",
   year: "numeric",
 });
 
@@ -30,76 +31,57 @@ export default async function ProgramsPage() {
 
   return (
     <>
-      <section className="page-head">
-        <div className="container">
-          <h1>Programs</h1>
+      <div className="page-hero events-hero">
+        <div className="page-hero-grid" />
+        <div
+          className="page-hero-blob"
+          style={{ width: 400, height: 400, background: "rgba(0,200,150,0.1)", top: -80, right: -60 }}
+        />
+        <div className="page-hero-content">
+          <div className="page-hero-eyebrow">Programs</div>
+          <h1>
+            Where learning
+            <br />
+            becomes <span className="accent">community.</span>
+          </h1>
           <p>
             Holiday bootcamps and term-time cohorts with live classes, a small
             group, and a real project to finish and show off.
           </p>
         </div>
-      </section>
+      </div>
 
-      <section className="section">
-        <div className="container">
-          {programs.length === 0 ? (
-            <p className="muted">
-              No programs are open right now.{" "}
-              <Link href="/register">Join the club</Link> and we&apos;ll let you
-              know as soon as the next one opens.
-            </p>
-          ) : (
-            <div className="grid grid--2">
-              {programs.map((program) => {
-                const left =
-                  program.capacity === null
-                    ? null
-                    : Math.max(0, program.capacity - program._count.enrollments);
-                const closed =
-                  program.registrationDeadline !== null &&
-                  program.registrationDeadline < new Date();
+      <section className="courses fade-up visible">
+        {programs.length === 0 ? (
+          <p style={{ textAlign: "center", opacity: 0.7 }}>
+            No programs are open right now. <Link href="/register">Join the club</Link>{" "}
+            and we&apos;ll let you know as soon as the next one opens.
+          </p>
+        ) : (
+          <div className="event-grid site-card-grid">
+            {programs.map((program) => {
+              const left =
+                program.capacity === null
+                  ? null
+                  : Math.max(0, program.capacity - program._count.enrollments);
+              const closed =
+                program.registrationDeadline !== null &&
+                program.registrationDeadline < new Date();
 
-                return (
-                  <Link
-                    key={program.id}
-                    href={`/programs/${program.id}`}
-                    className="card card--wide"
-                  >
-                    <div className="card__body">
-                      <span className="tag tag--warm">{program.type}</span>
-                      <h3>{program.title}</h3>
-                      {program.description && <p>{program.description}</p>}
-
-                      <dl className="facts">
-                        {program.startDate && (
-                          <div>
-                            <dt>Starts</dt>
-                            <dd>{dateFmt.format(program.startDate)}</dd>
-                          </div>
-                        )}
-                        {program.ageRange && (
-                          <div>
-                            <dt>Ages</dt>
-                            <dd>{program.ageRange}</dd>
-                          </div>
-                        )}
-                        {program.location && (
-                          <div>
-                            <dt>Where</dt>
-                            <dd>{program.location}</dd>
-                          </div>
-                        )}
-                        {program.sessions.length > 0 && (
-                          <div>
-                            <dt>Sessions</dt>
-                            <dd>{program.sessions.length}</dd>
-                          </div>
-                        )}
-                      </dl>
-                    </div>
-
-                    <div className="card__foot">
-                      <span className="muted">
+              return (
+                <article className="event-card" key={program.id}>
+                  <div className="event-date">
+                    {program.startDate ? dateFmt.format(program.startDate).split(" ")[0] : "🗓"}
+                  </div>
+                  <div className="event-info">
+                    <h3>{program.title}</h3>
+                    {program.description && <p>{program.description}</p>}
+                    <div className="event-meta">
+                      {program.startDate && <span>📅 {dateFmt.format(program.startDate)}</span>}
+                      {program.ageRange && <span>🧒 Ages {program.ageRange}</span>}
+                      {program.location && <span>💻 {program.location}</span>}
+                      <span>{formatPrice(program.priceKobo)}</span>
+                      <span>
                         {closed
                           ? "Registration closed"
                           : left === null
@@ -108,15 +90,21 @@ export default async function ProgramsPage() {
                               ? "Fully booked"
                               : `${left} seat${left === 1 ? "" : "s"} left`}
                       </span>
-                      <b>{formatPrice(program.priceKobo)}</b>
                     </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                    <p style={{ marginTop: 16 }}>
+                      <Link className="btn-navy" href={`/programs/${program.id}`}>
+                        {closed || left === 0 ? "View program" : "See the program →"}
+                      </Link>
+                    </p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
+
+      <CtaBanner />
     </>
   );
 }

@@ -1,0 +1,111 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Hero animations — the CSS equivalent of V4's framer-motion sequences.
+
+   V4 drove these with framer-motion. Ported to CSS because the animations here
+   are all entrance fades, translations and infinite floats, which CSS does
+   natively — and framer-motion would add well over 100KB of JavaScript to the
+   first paint of the marketing site. The audience is largely parents on Nigerian
+   mobile networks, where that cost is paid in real seconds.
+
+   The visual result is the same easing and timing V4 used:
+   cubic-bezier(0.22, 1, 0.36, 1), staggered by the same delays.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes ce-rise {
+  from { opacity: 0; transform: translateY(48px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ce-rise-sm {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ce-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes ce-slide-in {
+  from { opacity: 0; transform: translateX(60px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Stands in for framer-motion's spring on scale — overshoot then settle. */
+@keyframes ce-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.06); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ce-pop-rotate {
+  0%   { opacity: 0; transform: rotate(-10deg) scale(0.5); }
+  60%  { opacity: 1; transform: rotate(3deg) scale(1.05); }
+  100% { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+
+@keyframes ce-float {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -10px; }
+}
+
+.ce-anim {
+  /* Start hidden, then run — otherwise the element flashes at full opacity
+     before its delayed animation begins. */
+  opacity: 0;
+  animation-duration: 0.7s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: forwards;
+}
+
+.ce-rise     { animation-name: ce-rise; }
+.ce-rise-sm  { animation-name: ce-rise-sm; animation-duration: 0.6s; }
+.ce-fade     { animation-name: ce-fade; }
+.ce-slide-in { animation-name: ce-slide-in; animation-duration: 0.85s; }
+.ce-pop      { animation-name: ce-pop; animation-duration: 0.5s; }
+.ce-pop-rot  { animation-name: ce-pop-rotate; animation-duration: 0.6s; }
+
+/* Infinite float, layered on top of an entrance via a wrapper element so the
+   two animations do not fight over `transform`. `translate` is used for the
+   float so it composes with the entrance's transform. */
+.ce-float { animation: ce-float 4s ease-in-out infinite; }
+
+.ce-d1  { animation-delay: 0.10s; }
+.ce-d2  { animation-delay: 0.25s; }
+.ce-d3  { animation-delay: 0.42s; }
+.ce-d4  { animation-delay: 0.58s; }
+.ce-d5  { animation-delay: 0.80s; }
+.ce-d6  { animation-delay: 1.05s; }
+.ce-d7  { animation-delay: 1.20s; }
+.ce-d8  { animation-delay: 1.40s; }
+
+/*
+  Some children are vestibular-sensitive, and this is a site aimed at children:
+  honour the preference completely rather than merely shortening things. Content
+  is shown immediately at its final state.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .ce-anim {
+    opacity: 1;
+    animation: none !important;
+  }
+  .ce-float { animation: none !important; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Skip link. V4 had no equivalent, so it has no styles in site-v4.css — without
+   this it renders as stray visible text at the top of every page.
+   ───────────────────────────────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 200;
+  background: #0d1b3e;
+  color: #fff;
+  padding: 0.75rem 1rem;
+  border-radius: 0 0 8px 0;
+  font-weight: 700;
+  text-decoration: none;
+}
+.skip-link:focus { left: 0; }

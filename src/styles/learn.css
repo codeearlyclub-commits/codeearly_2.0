@@ -1,0 +1,349 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   The learning experience — course overview and lesson player.
+
+   Modelled on Coursera and Udemy, for the reasons those layouts converged:
+   a persistent curriculum rail so a child always knows where they are and how
+   much is left, one clear next action, and progress that is visible without
+   being asked for.
+
+   Two departures from those products, because the reader is 7–16:
+   larger type and hit targets throughout, and no upsells, ratings, "students
+   also bought", or countdown pressure. A child is not a funnel.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.learn {
+  --rail: 320px;
+  min-height: 100vh;
+  background: var(--off);
+}
+
+/* ── Course overview ─────────────────────────────────────────────────────── */
+
+.learn-hero {
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+  color: #fff;
+  padding: 40px clamp(16px, 4vw, 48px);
+}
+.learn-hero__inner { max-width: 1100px; margin-inline: auto; }
+.learn-hero__eyebrow {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+  background: rgba(0, 200, 150, 0.14);
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 14px;
+}
+.learn-hero h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.7rem, 4.5vw, 2.6rem);
+  line-height: 1.14;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+.learn-hero p { color: rgba(255, 255, 255, 0.75); max-width: 46rem; line-height: 1.6; }
+
+.learn-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-top: 22px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.72);
+}
+.learn-hero__meta b { color: #fff; }
+
+/* Progress presented as a single honest number plus a bar. A ring looks smarter
+   and is harder for a child to read at a glance. */
+.learn-progress { margin-top: 26px; max-width: 30rem; }
+.learn-progress__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+.learn-progress__pct {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--green);
+}
+.learn-progress__track {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.learn-progress__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--green) 0%, var(--sky) 100%);
+  transition: width 0.4s ease;
+}
+
+.learn-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+
+/* ── Curriculum ──────────────────────────────────────────────────────────── */
+
+.learn-body { max-width: 1100px; margin-inline: auto; padding: 32px clamp(16px, 4vw, 48px) 72px; }
+
+.learn-section {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.learn-section__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.learn-section__head h2 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--navy);
+}
+.learn-section__head p { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+.learn-section__count { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+
+.learn-list { list-style: none; }
+.learn-list li + li { border-top: 1px solid var(--border); }
+
+.learn-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 22px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 60px;
+}
+.learn-item:hover { background: var(--green-light); }
+.learn-item--locked { opacity: 0.55; cursor: not-allowed; }
+
+/* The tick is the single most important affordance on this page: a child scans
+   for what is left, not for what is done. */
+.learn-tick {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: transparent;
+  background: #fff;
+}
+.learn-tick--done { background: var(--green); border-color: var(--green); color: var(--navy); }
+.learn-tick--current { border-color: var(--green); border-style: dashed; }
+
+.learn-item__main { flex: 1 1 auto; min-width: 0; }
+.learn-item__title { font-weight: 700; color: var(--navy); }
+.learn-item__sub { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.learn-item__kind {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--blue-mid);
+  background: var(--sky-light);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+/* ── Lesson player ───────────────────────────────────────────────────────── */
+
+.player { display: grid; grid-template-columns: 1fr; min-height: 100vh; background: var(--off); }
+@media (min-width: 1000px) { .player { grid-template-columns: var(--rail) 1fr; } }
+
+.player__rail {
+  background: var(--navy);
+  color: #fff;
+  padding: 20px 16px 32px;
+}
+@media (min-width: 1000px) {
+  /* Sticky rail: the point of this layout is that "where am I?" is always
+     answered without scrolling back. */
+  .player__rail { position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+}
+.player__back {
+  display: inline-block;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.player__course {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+}
+.player__progress { font-size: 0.8rem; color: rgba(255, 255, 255, 0.6); margin-bottom: 6px; }
+.player__track { height: 7px; border-radius: var(--radius-pill); background: rgba(255,255,255,0.16); overflow: hidden; margin-bottom: 20px; }
+.player__fill { height: 100%; background: var(--green); border-radius: var(--radius-pill); transition: width 0.4s ease; }
+
+.player__group { margin-bottom: 18px; }
+.player__group h3 {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 8px;
+}
+.player__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.player__link:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.player__link.is-current { background: rgba(0, 200, 150, 0.18); color: #fff; font-weight: 700; }
+.player__dot {
+  flex: 0 0 auto;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  display: grid; place-items: center;
+  font-size: 0.6rem; font-weight: 900;
+  color: transparent;
+}
+.player__dot--done { background: var(--green); border-color: var(--green); color: var(--navy); }
+
+.player__main { padding: 28px clamp(16px, 5vw, 56px) 80px; }
+.player__inner { max-width: 46rem; margin-inline: auto; }
+
+.player__pos { font-size: 0.82rem; color: var(--muted); font-weight: 700; }
+.player__title {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
+  line-height: 1.16;
+  color: var(--navy);
+  margin: 6px 0 8px;
+}
+.player__summary { color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+
+/* ── Content blocks ──────────────────────────────────────────────────────── */
+
+/* Generous line height and a capped measure: this is read by children, often on
+   a phone, and long lines are where young readers lose their place. */
+.block { margin-bottom: 22px; }
+.block-heading {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  color: var(--navy);
+  margin: 34px 0 10px;
+}
+.block-text { font-size: 1.05rem; line-height: 1.85; color: var(--text); }
+.block-list { padding-left: 22px; }
+.block-list li { font-size: 1.05rem; line-height: 1.8; color: var(--text); margin-bottom: 6px; }
+
+.block-code {
+  background: var(--navy);
+  color: #e6f7ff;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.block-code__lang {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 8px;
+  font-weight: 800;
+}
+.block-code pre { margin: 0; font-family: var(--font-jakarta), ui-monospace, monospace; }
+
+.block-callout {
+  background: var(--yellow-light);
+  border-left: 4px solid var(--yellow);
+  border-radius: var(--radius-sm);
+  padding: 16px 18px;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.block-image img { width: 100%; height: auto; border-radius: var(--radius-md); display: block; }
+.block-image figcaption { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+
+.block-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: #000;
+}
+.block-video iframe { width: 100%; height: 100%; border: 0; }
+
+/* ── Footer actions ──────────────────────────────────────────────────────── */
+
+.player__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 40px;
+  padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+.player__foot .spacer { flex: 1 1 auto; }
+
+.done-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green-light);
+  color: var(--green-dark);
+  font-weight: 800;
+  padding: 11px 18px;
+  border-radius: var(--radius-pill);
+}
+
+/* Celebrating a finished course. Children remember the moment something is
+   completed far more than the content of lesson four. */
+.course-done {
+  background: linear-gradient(135deg, var(--green) 0%, var(--sky) 100%);
+  color: var(--navy);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  text-align: center;
+  margin-bottom: 26px;
+}
+.course-done h2 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  margin-bottom: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-progress__fill, .player__fill { transition: none; }
+}

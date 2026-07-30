@@ -37,7 +37,7 @@ export default function StudentLoginPage() {
       setError(body?.error?.message ?? "That code or PIN isn't right.");
       return;
     }
-    router.push("/portal/me");
+    router.push("/me");
     router.refresh();
   }
 

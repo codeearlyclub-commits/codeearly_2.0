@@ -93,3 +93,10 @@ jobs:
             sleep 2
           done
           npx tsx scripts/check-paystack-webhook.ts
+
+      # Separate from the webhook contract because it asserts a different thing:
+      # not "was the payment recorded correctly" but "did the family actually
+      # GET what they paid for". That gap shipped once and every signal —
+      # invoice PAID, receipt sent, ledger balanced — said it had worked.
+      - name: Payment grants access
+        run: npx tsx scripts/check-fulfilment.ts

@@ -1,0 +1,139 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Parent portal.
+
+   Between the website's warmth and the admin's density. Parents use this
+   occasionally, often on a phone, usually to do one specific thing — so actions
+   are large and the current state is stated plainly rather than implied.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.portal-shell { min-height: 100vh; background: var(--off); }
+
+.portal-bar {
+  background: var(--navy);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.portal-bar__inner {
+  max-width: 1000px;
+  margin-inline: auto;
+  padding: 0.85rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.portal-bar__brand {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  text-decoration: none;
+}
+.portal-bar__brand span { color: var(--green); }
+
+.portal-bar__nav { display: flex; gap: 1.1rem; flex-wrap: wrap; margin-left: auto; }
+.portal-bar__nav a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.portal-bar__nav a:hover { color: #fff; }
+.portal-bar__admin {
+  color: var(--green) !important;
+  border: 1px solid rgba(0, 200, 150, 0.4);
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.7rem;
+}
+
+.portal-body { max-width: 1000px; margin-inline: auto; padding: 1.75rem 1.25rem 4rem; }
+
+.portal-page h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.7rem;
+  color: var(--navy);
+  margin-bottom: 1.25rem;
+}
+.portal-page__sub {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--navy);
+  margin: 2rem 0 1rem;
+}
+
+.portal-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 760px) { .portal-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ── Enrolled lists ───────────────────────────────────────────────────────── */
+
+.enrolled { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+.enrolled li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+
+/* ── Checkout ─────────────────────────────────────────────────────────────── */
+
+.checkout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.checkout__child { display: flex; align-items: center; gap: 0.4rem; font-weight: 700; font-size: 0.85rem; }
+.checkout__child select {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+.checkout__price { font-weight: 800; color: var(--navy); }
+.checkout__ok {
+  color: var(--green-dark);
+  font-weight: 700;
+  background: var(--green-light);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  width: 100%;
+  margin: 0.5rem 0 0;
+}
+
+/* ── Invoices ─────────────────────────────────────────────────────────────── */
+
+.invoice-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; }
+.invoice-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.invoice-list__pay { display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap; }
+
+.pill--paid { background: var(--green-light); color: var(--green-dark); }
+.pill--pending { background: var(--yellow-light); color: #8a6d00; }
+.pill--cancelled,
+.pill--failed { background: #fee2e2; color: #991b1b; }

@@ -20,6 +20,7 @@ import { errors } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 import { formatNaira } from "@/lib/money";
 import { sendEmail, paymentReceiptEmail } from "@/server/email/send";
+import { fulfilInvoice } from "@/server/payments/fulfilment";
 
 const PAYSTACK_API = "https://api.paystack.co";
 
@@ -195,6 +196,24 @@ export async function recordSuccessfulPayment(input: {
       });
     }
   });
+
+  // Grant what was bought. Deliberately AFTER the payment is committed and
+  // wrapped so a fulfilment failure cannot roll back the money — access pending
+  // is a support ticket, money silently rejected is a refund.
+  if (invoice) {
+    try {
+      const result = await fulfilInvoice(invoice);
+      logger.info(
+        { reference: input.reference, invoice: invoice.invoiceNumber, ...result },
+        "invoice fulfilled"
+      );
+    } catch (err) {
+      logger.error(
+        { err, reference: input.reference, invoice: invoice.invoiceNumber },
+        "PAYMENT RECORDED BUT FULFILMENT FAILED — needs manual grant"
+      );
+    }
+  }
 
   // Receipt goes out only from here — the webhook-confirmed path — so a
   // browser hitting the callback URL can never trigger a receipt for money we

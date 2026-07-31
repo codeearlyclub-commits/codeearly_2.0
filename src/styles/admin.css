@@ -370,3 +370,23 @@
    wraps in ways that make it unreadable while you are writing it. */
 .modal__box--wide { max-width: 56rem; }
 .modal__box--wide textarea { font-family: var(--font-jakarta), ui-monospace, monospace; font-size: 0.9rem; }
+
+/* ── Records (reports & certificates) ─────────────────────────────────────── */
+
+.records-layout { display: grid; gap: 1.25rem; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 1000px) { .records-layout { grid-template-columns: 260px 1fr; } }
+@media (min-width: 1000px) { .records-layout > aside { position: sticky; top: 1.5rem; } }
+
+.records-children { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; max-height: 60vh; overflow-y: auto; }
+.records-children a {
+  display: flex;
+  flex-direction: column;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--navy);
+  border: 1px solid transparent;
+}
+.records-children a:hover { background: var(--off); }
+.records-children a.is-current { background: var(--green-light); border-color: var(--green); }
+.records-children .muted { font-size: 0.78rem; }

@@ -127,12 +127,13 @@ async function main() {
   );
 
   // ── Certificates ───────────────────────────────────────────────────────────
-  const cert = await issueCertificate({
+  const { certificate: cert, created } = await issueCertificate({
     childId: child.id,
     kind: "COURSE",
     title: course.title,
     subjectId: course.id,
   });
+  check("a first issue reports created", created === true);
   check("serial looks like a certificate serial", /^CE-CERT-[A-Z0-9]{4}$/.test(cert.serial), cert.serial);
   check("recipient name is frozen on the document", cert.recipientName === "Ada");
 
@@ -143,10 +144,14 @@ async function main() {
     subjectId: course.id,
   });
   // Two serials for one course is exactly what a school queries.
-  check("issuing twice returns the same certificate", again.id === cert.id);
+  check("issuing twice returns the same certificate", again.certificate.id === cert.id);
+  // And must not CLAIM to have issued one — an admin pressing the button twice
+  // should be told nothing was outstanding.
+  check("a repeat issue reports created: false", again.created === false);
 
   const batch = await issueOutstandingCertificates(child.id);
-  check("batch issue is idempotent", batch.length === 1 && batch[0]!.id === cert.id);
+  check("batch reports nothing newly created", batch.created.length === 0, `${batch.created.length} created`);
+  check("batch still reports the total", batch.total === 1, `${batch.total} total`);
 
   // Renaming the course must not change what the framed document says.
   await prisma.course.update({ where: { id: course.id }, data: { title: "Renamed Course" } });

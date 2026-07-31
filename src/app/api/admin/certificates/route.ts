@@ -19,9 +19,15 @@ export const POST = apiHandler(async (req) => {
   await requireAdmin(req);
   const body = await parseBody(req, z.object({ childId: z.string().min(1) }));
 
-  // Idempotent: safe to press twice, and safe to run as a batch.
-  const issued = await issueOutstandingCertificates(body.childId);
-  return { count: issued.length, serials: issued.map((c) => c.serial) };
+  // Idempotent: safe to press twice, and safe to run as a batch. `created` is
+  // reported separately from `total` so the UI can say "nothing outstanding"
+  // rather than claiming to have issued certificates that already existed.
+  const result = await issueOutstandingCertificates(body.childId);
+  return {
+    created: result.created.length,
+    total: result.total,
+    serials: result.created.map((c) => c.serial),
+  };
 });
 
 export const PATCH = apiHandler(async (req) => {

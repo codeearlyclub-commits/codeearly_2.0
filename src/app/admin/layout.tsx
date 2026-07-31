@@ -28,6 +28,7 @@ const NAV = [
     items: [
       { href: "/admin/courses", label: "Courses" },
       { href: "/admin/programs", label: "Programs" },
+      { href: "/admin/records", label: "Reports & certificates" },
     ],
   },
   {

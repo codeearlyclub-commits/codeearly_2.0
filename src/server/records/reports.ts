@@ -148,6 +148,42 @@ export async function listReportsForParent(parentId: string) {
   });
 }
 
+/**
+ * Everything staff need about one child on a single screen: their reports, their
+ * certificates, and which courses they have finished but not been certified for.
+ *
+ * That last list is the point — it turns "who is owed a certificate?" from a
+ * question somebody has to remember to ask into something the screen states.
+ */
+export async function getChildRecords(childId: string) {
+  const child = await prisma.child.findUnique({
+    where: { id: childId },
+    select: {
+      id: true,
+      childName: true,
+      membershipId: true,
+      parent: { select: { name: true, email: true } },
+    },
+  });
+  if (!child) throw errors.notFound("Child not found.");
+
+  const [reports, certificates, completions] = await Promise.all([
+    prisma.reportCard.findMany({ where: { childId }, orderBy: { periodEnd: "desc" } }),
+    prisma.certificate.findMany({ where: { childId }, orderBy: { issuedAt: "desc" } }),
+    prisma.courseCompletion.findMany({
+      where: { childId },
+      include: { course: { select: { id: true, title: true } } },
+    }),
+  ]);
+
+  const certifiedSubjects = new Set(
+    certificates.filter((c) => c.subjectId).map((c) => c.subjectId!)
+  );
+  const awaitingCertificate = completions.filter((c) => !certifiedSubjects.has(c.courseId));
+
+  return { child, reports, certificates, awaitingCertificate };
+}
+
 // ── Certificates ─────────────────────────────────────────────────────────────
 
 /**
@@ -183,7 +219,9 @@ export async function issueCertificate(input: {
     const existing = await prisma.certificate.findFirst({
       where: { childId: input.childId, kind: input.kind, subjectId: input.subjectId },
     });
-    if (existing) return existing;
+    // `created: false` matters to the caller: an admin pressing "Issue" twice
+    // must not be told they issued something the second time.
+    if (existing) return { certificate: existing, created: false };
   }
 
   for (let attempt = 0; attempt < 10; attempt++) {
@@ -201,7 +239,7 @@ export async function issueCertificate(input: {
         },
       });
       logger.info({ childId: child.id, serial: certificate.serial }, "certificate issued");
-      return certificate;
+      return { certificate, created: true };
     } catch (err) {
       if ((err as { code?: string }).code === "P2002") continue;
       throw err;
@@ -213,6 +251,10 @@ export async function issueCertificate(input: {
 /**
  * Issue certificates for every completed course a child has not yet been
  * certified for. Safe to re-run.
+ *
+ * Reports `created` separately from `total` so the caller can say "nothing
+ * outstanding" rather than claiming to have issued certificates that already
+ * existed.
  */
 export async function issueOutstandingCertificates(childId: string) {
   const completions = await prisma.courseCompletion.findMany({
@@ -220,17 +262,19 @@ export async function issueOutstandingCertificates(childId: string) {
     include: { course: { select: { id: true, title: true } } },
   });
 
-  const issued = [];
+  const created = [];
+  const all = [];
   for (const completion of completions) {
-    const certificate = await issueCertificate({
+    const result = await issueCertificate({
       childId,
       kind: "COURSE",
       title: completion.course.title,
       subjectId: completion.courseId,
     });
-    issued.push(certificate);
+    all.push(result.certificate);
+    if (result.created) created.push(result.certificate);
   }
-  return issued;
+  return { created, total: all.length };
 }
 
 /**

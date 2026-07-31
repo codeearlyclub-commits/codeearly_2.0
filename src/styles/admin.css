@@ -312,3 +312,61 @@
   cursor: pointer;
   height: fit-content;
 }
+
+/* ── Curriculum builder ───────────────────────────────────────────────────── */
+
+.admin__crumbs { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+.admin__crumbs a { color: var(--muted); text-decoration: none; font-weight: 600; }
+.admin__crumbs a:hover { color: var(--green-dark); }
+
+.builder__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.builder__head h2 { margin-bottom: 2px; }
+
+.builder__list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.builder__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+}
+.builder__num {
+  flex: 0 0 auto;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--off);
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: grid; place-items: center;
+}
+.builder__main { flex: 1 1 14rem; min-width: 0; display: flex; flex-direction: column; }
+.builder__main .muted { font-size: 0.82rem; }
+
+.table__link {
+  display: inline-block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--green-dark);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  margin-right: 0.35rem;
+}
+.table__link:hover { border-color: var(--green); }
+
+/* The block editor needs more width than a form modal — a code block at 40rem
+   wraps in ways that make it unreadable while you are writing it. */
+.modal__box--wide { max-width: 56rem; }
+.modal__box--wide textarea { font-family: var(--font-jakarta), ui-monospace, monospace; font-size: 0.9rem; }

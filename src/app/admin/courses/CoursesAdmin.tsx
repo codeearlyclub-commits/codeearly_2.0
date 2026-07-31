@@ -9,6 +9,7 @@
  */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import { nairaToKobo, koboToNaira, formatPrice } from "@/lib/money";
 
@@ -201,6 +202,11 @@ export function CoursesAdmin({ initial }: { initial: Course[] }) {
                 <td>{formatPrice(course.priceKobo)}</td>
                 <td>{course.enrolments}</td>
                 <td className="table__actions">
+                  {/* Curriculum is a page, not a modal: authoring is sustained
+                      work and needs a URL that can be linked and refreshed. */}
+                  <Link className="table__link" href={`/admin/courses/${course.id}`}>
+                    Curriculum
+                  </Link>
                   <button type="button" onClick={() => openEdit(course)}>
                     Edit
                   </button>

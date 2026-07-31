@@ -139,6 +139,8 @@ model Child {
   lessonProgress     LessonProgress[]
   courseCompletions  CourseCompletion[]
   activity           LearningActivity[]
+  reportCards        ReportCard[]
+  certificates       Certificate[]
 
   @@index([parentId])
 }
@@ -311,6 +313,88 @@ model CourseCompletion {
 
   @@unique([childId, courseId])
   @@index([courseId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEARNER RECORDS — report cards and certificates.
+//
+// Both are documents a parent keeps, prints, and may show to a school. That
+// makes them different from every other table here: once issued, what they say
+// must not silently change because the underlying data moved on. So both store
+// a SNAPSHOT of the figures at issue time rather than recomputing on render.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ReportStatus {
+  DRAFT // being written; invisible to the parent
+  PUBLISHED // visible in the portal
+}
+
+model ReportCard {
+  id       String @id @default(cuid())
+  childId  String
+  child    Child  @relation(fields: [childId], references: [id], onDelete: Cascade)
+  /// Human label as it appears on the document, e.g. "Term 2, 2026".
+  period   String
+  periodStart DateTime
+  periodEnd   DateTime
+
+  /// Figures frozen at issue. A parent reading last term's report must see last
+  /// term's numbers, not this term's — recomputing would quietly rewrite history.
+  lessonsCompleted Int
+  coursesCompleted Int
+  minutesLearning  Int
+  quizzesPlayed    Int
+  averageQuizScore Int?
+
+  /// Written by staff. The part parents actually read first.
+  comment      String?
+  /// Free-form, e.g. "Excellent", "Working hard". Deliberately not an enum:
+  /// teachers phrase these differently and a fixed list would be fought.
+  overallGrade String?
+
+  status      ReportStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@unique([childId, period])
+  @@index([childId, status])
+}
+
+enum CertificateKind {
+  COURSE
+  PROGRAM
+  COMPETITION
+}
+
+/// An award a child earned. Verifiable by anyone holding the serial.
+model Certificate {
+  id      String          @id @default(cuid())
+  childId String
+  child   Child           @relation(fields: [childId], references: [id], onDelete: Cascade)
+  kind    CertificateKind
+
+  /// Printed on the certificate and frozen: renaming a course later must not
+  /// change what an already-issued certificate claims the child completed.
+  title       String
+  /// The child's name as printed, for the same reason.
+  recipientName String
+  /// Loose reference to the course/program/competition. No FK: deleting a course
+  /// must not delete the evidence a child completed it.
+  subjectId   String?
+
+  /// Public verification code, e.g. CE-CERT-4K7QX9. Printed on the document so a
+  /// school can check it is genuine without contacting us.
+  serial String @unique
+
+  issuedAt DateTime @default(now())
+  /// Set if a certificate is withdrawn (issued in error, for instance). Never
+  /// deleted — a revoked certificate must still verify, and say it was revoked.
+  revokedAt     DateTime?
+  revokedReason String?
+
+  @@index([childId])
+  @@index([subjectId])
 }
 
 enum ActivityKind {

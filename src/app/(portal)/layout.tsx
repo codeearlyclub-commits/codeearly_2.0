@@ -23,6 +23,7 @@ const NAV = [
   { href: "/portal/courses", label: "Courses" },
   { href: "/portal/programs", label: "Programs" },
   { href: "/portal/invoices", label: "Payments" },
+  { href: "/portal/records", label: "Reports" },
   { href: "/portal/account", label: "Account" },
 ];
 

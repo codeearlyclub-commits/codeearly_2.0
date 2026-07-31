@@ -1,0 +1,273 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Certificates, verification, and report cards.
+
+   These are the only screens in the product designed to be PRINTED. Everything
+   here carries a print stylesheet, because a parent's instinct with a
+   certificate or a report card is Ctrl+P — and a page that prints with a navbar
+   across the top and a button in the middle looks amateurish on a fridge door.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* ── Verification ────────────────────────────────────────────────────────── */
+
+.verify {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  background: var(--off, #f5f3ff);
+}
+
+.verify__card {
+  background: #fff;
+  border: 1px solid var(--border, #e4e8f0);
+  border-top: 6px solid var(--green, #00c896);
+  border-radius: 20px;
+  padding: 36px 32px;
+  max-width: 34rem;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 28px rgba(13, 27, 62, 0.11);
+}
+.verify__card--good { border-top-color: var(--green, #00c896); }
+.verify__card--warn { border-top-color: var(--orange, #ff8c42); }
+.verify__card--bad  { border-top-color: var(--coral, #ff6b6b); }
+
+.verify__mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 16px;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--green, #00c896);
+}
+.verify__card--warn .verify__mark { background: var(--orange, #ff8c42); }
+.verify__card--bad .verify__mark  { background: var(--coral, #ff6b6b); }
+
+.verify h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--navy, #0d1b3e);
+  margin-bottom: 8px;
+}
+.verify__lead { color: var(--muted, #5b6b8c); line-height: 1.6; margin-bottom: 24px; }
+.verify__note { font-size: 0.85rem; color: var(--muted, #5b6b8c); }
+
+.verify__facts {
+  text-align: left;
+  display: grid;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 20px;
+  background: var(--off, #f5f3ff);
+  border-radius: 14px;
+}
+.verify__facts > div { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.verify__facts dt {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted, #5b6b8c);
+  font-weight: 700;
+}
+.verify__facts dd { font-weight: 700; color: var(--navy, #0d1b3e); margin: 0; text-align: right; }
+
+.verify__revoked {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+/* ── The certificate itself ──────────────────────────────────────────────── */
+
+.cert-page { background: var(--off, #f5f3ff); padding: 28px 16px 60px; }
+.cert-toolbar {
+  max-width: 1000px;
+  margin: 0 auto 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Sized to A4 landscape so "print" produces a document, not a screenshot. */
+.cert {
+  width: 100%;
+  max-width: 1000px;
+  aspect-ratio: 297 / 210;
+  margin: 0 auto;
+  background: #fff;
+  border: 14px solid var(--navy, #0d1b3e);
+  outline: 2px solid var(--green, #00c896);
+  outline-offset: -22px;
+  padding: clamp(24px, 5vw, 56px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+}
+
+.cert__eyebrow {
+  font-size: clamp(0.7rem, 1.4vw, 0.85rem);
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--green-dark, #00a87e);
+  margin-bottom: 10px;
+}
+.cert__title {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 4.5vw, 2.8rem);
+  color: var(--navy, #0d1b3e);
+  letter-spacing: -0.02em;
+  margin-bottom: 22px;
+}
+.cert__presented { font-size: clamp(0.8rem, 1.6vw, 0.95rem); color: var(--muted, #5b6b8c); }
+.cert__name {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.8rem, 5.5vw, 3.2rem);
+  color: var(--green-dark, #00a87e);
+  margin: 6px 0 18px;
+  border-bottom: 3px solid var(--green-light, #dcfaf2);
+  padding-bottom: 10px;
+  min-width: 55%;
+}
+.cert__for { font-size: clamp(0.85rem, 1.8vw, 1.05rem); color: var(--text, #1a2540); line-height: 1.6; max-width: 40rem; }
+.cert__course { font-weight: 800; color: var(--navy, #0d1b3e); }
+
+.cert__foot {
+  margin-top: auto;
+  padding-top: 26px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  font-size: clamp(0.65rem, 1.3vw, 0.8rem);
+  color: var(--muted, #5b6b8c);
+}
+.cert__foot b { display: block; color: var(--navy, #0d1b3e); font-size: 1.05em; }
+.cert__serial { font-family: var(--font-jakarta), ui-monospace, monospace; letter-spacing: 0.08em; }
+
+.cert--revoked::after {
+  content: "WITHDRAWN";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(3rem, 12vw, 7rem);
+  color: rgba(255, 107, 107, 0.22);
+  transform: rotate(-18deg);
+  pointer-events: none;
+}
+
+/* ── Report card ─────────────────────────────────────────────────────────── */
+
+.report {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--border, #e4e8f0);
+  border-radius: 16px;
+  padding: clamp(20px, 4vw, 40px);
+}
+.report__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--navy, #0d1b3e);
+  margin-bottom: 22px;
+}
+.report__head h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  color: var(--navy, #0d1b3e);
+}
+.report__meta { text-align: right; font-size: 0.85rem; color: var(--muted, #5b6b8c); }
+
+.report__figures {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin-bottom: 24px;
+}
+.report__figure {
+  background: var(--off, #f5f3ff);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.report__figure b {
+  display: block;
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: var(--navy, #0d1b3e);
+  line-height: 1.1;
+}
+.report__figure span { font-size: 0.78rem; color: var(--muted, #5b6b8c); }
+
+.report__comment {
+  background: var(--green-light, #dcfaf2);
+  border-left: 4px solid var(--green, #00c896);
+  border-radius: 10px;
+  padding: 18px 20px;
+  line-height: 1.75;
+  color: var(--text, #1a2540);
+  white-space: pre-wrap;
+}
+.report__grade {
+  display: inline-block;
+  background: var(--navy, #0d1b3e);
+  color: #fff;
+  font-weight: 800;
+  padding: 6px 16px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+/* ── Print ───────────────────────────────────────────────────────────────── */
+
+@media print {
+  /* Nothing but the document. A certificate that prints with a navbar and a
+     "Print" button on it is not a certificate. */
+  .cert-toolbar,
+  .portal-bar,
+  .site-header,
+  .admin__side,
+  footer,
+  nav { display: none !important; }
+
+  body, .cert-page, .verify { background: #fff !important; padding: 0 !important; }
+
+  .cert {
+    border-width: 10px;
+    max-width: none;
+    width: 100%;
+    height: 100vh;
+    aspect-ratio: auto;
+    page-break-after: always;
+  }
+
+  .report { border: 0; padding: 0; max-width: none; }
+
+  @page { size: A4 landscape; margin: 10mm; }
+}

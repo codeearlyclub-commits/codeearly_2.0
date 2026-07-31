@@ -82,6 +82,13 @@ jobs:
       - name: LMS progress and access rules hold
         run: npx tsx scripts/check-lms.ts
 
+      # Report cards and certificates are documents a parent keeps and may hand
+      # to a school. The failures that matter are silent: a published report
+      # changing its figures, a duplicate certificate, or a withdrawn one that
+      # verifies as if nothing happened.
+      - name: Learner records stay truthful
+        run: npx tsx scripts/check-records.ts
+
       - name: Unit tests
         run: npm test
 

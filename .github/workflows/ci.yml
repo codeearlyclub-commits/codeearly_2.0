@@ -89,6 +89,14 @@ jobs:
       - name: Learner records stay truthful
         run: npx tsx scripts/check-records.ts
 
+      # The showcase is a public page about a child, so the consent rule is
+      # asserted twice — once in the service and once by going round it and
+      # writing to the database directly. Also covers event overselling under
+      # simultaneous bookings, and the promise that an unsubscribed address
+      # cannot come back.
+      - name: Content surfaces behave
+        run: npx tsx scripts/check-content.ts
+
       - name: Unit tests
         run: npm test
 

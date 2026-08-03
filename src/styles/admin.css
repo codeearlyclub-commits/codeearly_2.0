@@ -71,7 +71,62 @@
   font-size: 1.6rem;
   color: var(--navy);
 }
-.admin__actions { margin-bottom: 1rem; }
+.admin__actions { margin-bottom: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+
+/* ── Buttons ──────────────────────────────────────────────────────────────────
+   Two naming conventions exist in this app: `btn-primary` (shared with the
+   public site's CSS, which the admin does NOT load) and `btn--primary` (BEM,
+   used inside modals). Both are defined here so an admin button is never
+   silently unstyled just because a screen picked the other spelling.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.btn-primary,
+.btn-secondary,
+.btn--primary,
+.admin__actions > button {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.btn-primary,
+.btn--primary,
+.admin__actions > button.btn-primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--navy);
+}
+.btn-primary:hover,
+.btn--primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.btn-secondary:hover,
+.admin__actions > button:hover { border-color: var(--green); color: var(--green-dark); }
+.btn-primary[disabled],
+.btn-secondary[disabled],
+.btn--primary[disabled],
+.admin__actions > button[disabled] { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+/* Count of things waiting on a human. Only used where there is a deadline. */
+.admin__badge {
+  float: right;
+  min-width: 1.35rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--orange, #ff8c42);
+  color: #fff;
+}
 
 /* ── Stats ────────────────────────────────────────────────────────────────── */
 
@@ -118,6 +173,31 @@
   margin-bottom: 0.5rem;
 }
 .panel--warn { border-color: var(--yellow); background: var(--yellow-light); }
+
+/* Forms inside a panel get the same treatment as forms inside a modal. Some
+   editing is too long to live in a modal — a blog post, for one — and those
+   screens should not look like a different product. */
+.panel > label,
+.question > label { display: flex; flex-direction: column; gap: 0.3rem; font-weight: 700; font-size: 0.85rem; color: var(--navy); margin-bottom: 0.9rem; }
+.panel input,
+.panel textarea,
+.panel select,
+.question input,
+.question textarea,
+.question select {
+  font: inherit;
+  font-weight: 400;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+}
+.panel textarea, .question textarea { resize: vertical; }
+.panel .row { display: grid; gap: 0.9rem; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.panel .row > label { margin-bottom: 0.9rem; }
+.panel > .muted { font-size: 0.82rem; margin-bottom: 0.9rem; }
 
 /* Wide tables scroll inside their own container rather than pushing the page
    sideways — a horizontally scrolling admin is miserable on a laptop. */

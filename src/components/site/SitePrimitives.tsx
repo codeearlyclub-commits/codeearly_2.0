@@ -197,6 +197,42 @@ export function FaqGrid({ items }: { items?: Array<{ question: string; answer: s
   );
 }
 
+const avatarColors = [
+  { background: "var(--green-light)", color: "#008060" },
+  { background: "var(--sky-light)", color: "#1A3C6E" },
+  { background: "var(--purple-light)", color: "#4A2080" },
+  { background: "var(--yellow-light)", color: "#8B5A00" },
+];
+
+export function Testimonials({
+  items,
+}: {
+  items?: Array<{ id: string; quote: string; author: string; role: string | null }>;
+}) {
+  if (!items?.length) return null;
+  return (
+    <div className="t-grid">
+      {items.map((item, i) => (
+        // The first card gets the dark treatment, as V4 did — one accent in the
+        // grid rather than a wall of identical white boxes.
+        <article className={i === 0 ? "t-card feat" : "t-card"} key={item.id}>
+          <div className="t-stars">★★★★★</div>
+          <p className="t-quote">&ldquo;{item.quote}&rdquo;</p>
+          <div className="t-auth">
+            <div className="t-av" style={avatarColors[i % avatarColors.length]}>
+              {item.author.slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <div className="t-name">{item.author}</div>
+              {item.role && <div className="t-role">{item.role}</div>}
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
+
 export function Stats({ stats }: { stats?: Array<{ value: string; label: string }> }) {
   if (!stats?.length) return null;
   return (

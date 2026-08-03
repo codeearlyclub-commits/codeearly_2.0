@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 
+import { NewsletterSignup } from "./NewsletterSignup";
+
 /**
  * Public footer — ported from the live V4 site.
  *
@@ -99,6 +101,7 @@ export function SiteFooter() {
           <ul className="footer-links">
             <li><Link href="/courses">Courses</Link></li>
             <li><Link href="/programs">Programs</Link></li>
+            <li><Link href="/events">Events</Link></li>
             <li><Link href="/play">Join a Quiz</Link></li>
             <li><Link href="/register">Membership</Link></li>
           </ul>
@@ -108,14 +111,20 @@ export function SiteFooter() {
           <h4>Company</h4>
           <ul className="footer-links">
             <li><Link href="/about">About us</Link></li>
+            <li><Link href="/showcase">Student showcase</Link></li>
+            <li><Link href="/blog">Blog</Link></li>
+            <li><Link href="/faq">FAQs</Link></li>
             <li><Link href="/contact">Contact</Link></li>
-            <li><Link href="/contact">Partner with us</Link></li>
           </ul>
         </div>
 
         <div className="footer-col">
-          <h4>Legal</h4>
-          <ul className="footer-links">
+          <h4>Stay in touch</h4>
+          <p className="footer-desc" style={{ marginBottom: 4 }}>
+            One email a month: what the club is building, and what&apos;s coming up.
+          </p>
+          <NewsletterSignup />
+          <ul className="footer-links" style={{ marginTop: 18 }}>
             <li><Link href="/privacy">Privacy Policy</Link></li>
             <li><Link href="/terms">Terms of Use</Link></li>
             <li><Link href="/login">Member Login</Link></li>

@@ -15,6 +15,7 @@ import Link from "next/link";
 
 import "@/styles/admin.css";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,18 @@ const NAV = [
     group: "Money",
     items: [{ href: "/admin/invoices", label: "Invoices" }],
   },
+  {
+    group: "Website",
+    items: [
+      { href: "/admin/blog", label: "Blog" },
+      { href: "/admin/showcase", label: "Showcase" },
+      { href: "/admin/events", label: "Events" },
+      { href: "/admin/testimonials", label: "Testimonials" },
+      { href: "/admin/faqs", label: "FAQs" },
+      { href: "/admin/messages", label: "Enquiries" },
+      { href: "/admin/subscribers", label: "Newsletter" },
+    ],
+  },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -55,6 +68,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     // thing they would see if the route did not exist.
     redirect("/portal");
   }
+
+  // An unanswered enquiry is the one thing here with a clock on it, so it gets
+  // the only badge in the sidebar. Everything else can wait for someone to look.
+  const unanswered = await prisma.contactMessage.count({ where: { status: "NEW" } });
 
   return (
     <div className="admin">
@@ -70,6 +87,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               {section.items.map((item) => (
                 <Link key={item.href} href={item.href}>
                   {item.label}
+                  {item.href === "/admin/messages" && unanswered > 0 && (
+                    <span className="admin__badge">{unanswered}</span>
+                  )}
                 </Link>
               ))}
             </div>

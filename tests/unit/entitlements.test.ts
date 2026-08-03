@@ -16,6 +16,19 @@ import {
 
 const NOW = new Date("2026-07-01T12:00:00Z");
 
+/**
+ * The default fixture is a paying org, and must STAY one.
+ *
+ * `assertQuestionCount` and friends take no `now` — they read the real clock —
+ * so a hard-coded expiry date turns into a test that passes until that date and
+ * then fails for everyone, which is exactly what happened here. Anchoring the
+ * term to the real clock keeps "this org is paid up" true tomorrow as well.
+ *
+ * Tests that are ABOUT expiry pass an explicit `planExpiresAt` and an explicit
+ * `now`, so they stay deterministic.
+ */
+const WELL_INSIDE_TERM = new Date(Date.now() + 365 * 86_400_000);
+
 function org(overrides: Partial<Organization> = {}): Organization {
   return {
     id: "org_1",
@@ -29,7 +42,7 @@ function org(overrides: Partial<Organization> = {}): Organization {
     brandColor: null,
     planKey: "pro",
     planStartedAt: new Date("2026-06-01T00:00:00Z"),
-    planExpiresAt: new Date("2026-08-01T00:00:00Z"),
+    planExpiresAt: WELL_INSIDE_TERM,
     maxPlayersPerSession: 500,
     maxQuestionsPerQuiz: 100,
     maxSessionsPerMonth: null,

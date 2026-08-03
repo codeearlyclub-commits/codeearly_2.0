@@ -17,6 +17,7 @@ import Link from "next/link";
 
 import { listPublicCourses } from "@/server/courses/catalog";
 import { listPublicPrograms } from "@/server/programs/programs";
+import { listPublicTestimonials, listPublicShowcase } from "@/server/content/content";
 import { formatPrice } from "@/lib/money";
 import { HomeHero } from "@/components/site/HomeHero";
 import {
@@ -24,6 +25,7 @@ import {
   CtaBanner,
   FeatureGrid,
   SectionIntro,
+  Testimonials,
   type CardItem,
 } from "@/components/site/SitePrimitives";
 
@@ -96,9 +98,11 @@ const partnerMeta: Record<string, { icon: string; type: string; color: string }>
 const courseIcons = ["🐱", "🌐", "🎨", "💡", "⚡", "🐍", "🤖"];
 
 export default async function HomePage() {
-  const [courses, programs] = await Promise.all([
+  const [courses, programs, testimonials, showcase] = await Promise.all([
     listPublicCourses(),
     listPublicPrograms(),
+    listPublicTestimonials(),
+    listPublicShowcase(3),
   ]);
 
   const featured = programs.find((p) => p.featuredOnHomepage) ?? programs[0] ?? null;
@@ -310,6 +314,74 @@ export default async function HomePage() {
               See all courses →
             </Link>
           </div>
+        </section>
+      )}
+
+      {/* ── Showcase preview ────────────────────────────────────────────────
+          First names and ages only — the same rule as /showcase, and the same
+          reason. See that page's header comment. */}
+      {showcase.length > 0 && (
+        <section className="showcase-section fade-up visible">
+          <SectionIntro
+            eyebrow="Student showcase"
+            title={
+              <>
+                Look what they <span className="accent">made.</span>
+              </>
+            }
+            subtitle="Built by club members, shared with their parents' permission."
+          />
+          <div className="showcase-grid">
+            {showcase.map((project) => (
+              <article className="showcase-card" key={project.id}>
+                <div className="card-media">
+                  <div className="card-media-placeholder">🎮</div>
+                  <span className="card-type ct-project">Project</span>
+                </div>
+                <div className="card-body">
+                  <div className="card-student">
+                    <div className="student-av">
+                      {project.childFirstName.slice(0, 1).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="student-name">{project.childFirstName}</div>
+                      {project.childAge !== null && (
+                        <div className="student-age">Age {project.childAge}</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="card-title">{project.title}</div>
+                  {project.description && <div className="card-desc">{project.description}</div>}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 36 }}>
+            <Link className="btn-navy" href="/showcase">
+              See the whole showcase →
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* ── Testimonials ────────────────────────────────────────────────────
+          Rendered only when there are real ones. An empty quotes section with
+          invented copy is worse than no section at all. */}
+      {testimonials.length > 0 && (
+        <section className="testi fade-up visible" style={{ padding: "64px 5vw" }}>
+          <SectionIntro
+            eyebrow="What parents say"
+            title="Families who stayed."
+            subtitle="Unedited, from parents in the club."
+          />
+          <Testimonials
+            items={testimonials.map((t) => ({
+              id: t.id,
+              quote: t.quote,
+              author: t.author,
+              role: t.role,
+            }))}
+          />
         </section>
       )}
 

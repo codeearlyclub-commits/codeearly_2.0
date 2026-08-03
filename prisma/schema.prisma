@@ -316,6 +316,179 @@ model CourseCompletion {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CONTENT — the marketing surfaces V4 had: blog, showcase, events, testimonials,
+// FAQs, newsletter and enquiries.
+//
+// These share a shape deliberately: publishable, ordered, with a slug where the
+// public links to them. Keeping them uniform means one admin pattern rather than
+// seven, and one mistake to make rather than seven.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model BlogPost {
+  id       String        @id @default(cuid())
+  title    String
+  slug     String        @unique
+  excerpt  String?
+  /// Structured blocks, exactly as lessons are — same reasoning: nothing is
+  /// parsed as markup, so a post cannot inject anything into a reader's browser.
+  status   PublishStatus @default(DRAFT)
+  author   String        @default("CodeEarly Team")
+  coverUrl String?
+  tags     String[]
+  /// Set when first published, and kept thereafter — the date readers cite.
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  blocks BlogBlock[]
+
+  @@index([status, publishedAt])
+}
+
+model BlogBlock {
+  id     String    @id @default(cuid())
+  postId String
+  post   BlogPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  kind   BlockKind @default(TEXT)
+  text   String
+  meta   String?
+  order  Int       @default(0)
+
+  @@index([postId, order])
+}
+
+/// A child's project, shown publicly.
+///
+/// `childId` is optional and there is no FK to it: a showcase entry must survive
+/// a family leaving, and consent is recorded per entry rather than assumed from
+/// the account still existing.
+model ShowcaseProject {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String?
+  /// FIRST NAME ONLY. Never a full name, never a school — this is a public page
+  /// about a child.
+  childFirstName String
+  childAge       Int?
+  /// YouTube/Vimeo link or an image. Never an upload of a child's face.
+  mediaUrl    String?
+  projectUrl  String?
+  tags        String[]
+  status      PublishStatus @default(DRAFT)
+  featured    Boolean       @default(false)
+  /// Explicit parental consent, recorded with when and by whom. Publishing
+  /// without it is refused in the service.
+  consentGivenAt DateTime?
+  consentBy      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, featured])
+}
+
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  description String?
+  startsAt    DateTime
+  endsAt      DateTime?
+  location    String?
+  virtualLink String?
+  capacity    Int?
+  seatsTaken  Int           @default(0)
+  status      PublishStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  rsvps EventRsvp[]
+
+  @@index([status, startsAt])
+}
+
+model EventRsvp {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  phone     String?
+  guests    Int      @default(1)
+  createdAt DateTime @default(now())
+
+  /// One RSVP per email per event — a double submit is a mis-click, not two
+  /// families.
+  @@unique([eventId, email])
+  @@index([eventId])
+}
+
+model Testimonial {
+  id       String        @id @default(cuid())
+  quote    String
+  author   String
+  role     String?
+  status   PublishStatus @default(DRAFT)
+  order    Int           @default(0)
+  createdAt DateTime     @default(now())
+
+  @@index([status, order])
+}
+
+model Faq {
+  id       String        @id @default(cuid())
+  question String
+  answer   String
+  category String?
+  status   PublishStatus @default(DRAFT)
+  order    Int           @default(0)
+
+  @@index([status, order])
+}
+
+model NewsletterSubscriber {
+  id     String @id @default(cuid())
+  email  String @unique
+  name   String?
+  /// Kept after unsubscribing rather than deleted: re-adding an address someone
+  /// asked us to stop mailing is the one mistake that must be impossible.
+  unsubscribedAt DateTime?
+  /// Opaque token in the unsubscribe link, so it works without signing in.
+  unsubscribeToken String  @unique
+  createdAt DateTime @default(now())
+
+  @@index([unsubscribedAt])
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+/// A contact-form enquiry.
+///
+/// V4 emailed these and kept nothing, so an enquiry lost in an inbox was lost
+/// entirely. Storing them means none is silently dropped and staff can see what
+/// has not been answered.
+model ContactMessage {
+  id      String        @id @default(cuid())
+  name    String
+  email   String
+  phone   String?
+  message String
+  status  MessageStatus @default(NEW)
+  /// Kept for abuse investigation only, never displayed.
+  ipHash  String?
+  createdAt DateTime    @default(now())
+  handledAt DateTime?
+  handledBy String?
+
+  @@index([status, createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // LEARNER RECORDS — report cards and certificates.
 //
 // Both are documents a parent keeps, prints, and may show to a school. That

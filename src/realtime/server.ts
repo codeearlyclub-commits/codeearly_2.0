@@ -318,8 +318,37 @@ io.on("connection", async (socket) => {
 
 async function main() {
   const url = process.env.REDIS_URL || "redis://127.0.0.1:6379";
-  const pubClient = new IORedis(url);
+
+  /**
+   * Redis clients that survive a blip.
+   *
+   * The defaults give up after 20 retries and throw
+   * MaxRetriesPerRequestError, which is an UNHANDLED rejection here and takes
+   * the whole process down — observed doing exactly that. A quiz server dying
+   * mid-lesson because Redis paused for a second is not acceptable: the room is
+   * full of children waiting for the next question.
+   *
+   * So: retry forever with a capped backoff, and log rather than exit. Socket.io
+   * keeps serving connected clients from memory while the adapter reconnects;
+   * only cross-instance broadcast is degraded, and on a single instance not even
+   * that.
+   */
+  const redisOptions = {
+    maxRetriesPerRequest: null as null,
+    retryStrategy: (times: number) => Math.min(times * 200, 5_000),
+  };
+
+  const pubClient = new IORedis(url, redisOptions);
   const subClient = pubClient.duplicate();
+
+  for (const [name, client] of [["pub", pubClient], ["sub", subClient]] as const) {
+    client.on("error", (err) => {
+      // Logged, never rethrown. ioredis reconnects on its own.
+      logger.warn({ err: err.message, client: name }, "redis connection problem");
+    });
+    client.on("ready", () => logger.info({ client: name }, "redis connected"));
+  }
+
   io.adapter(createAdapter(pubClient, subClient));
 
   httpServer.listen(PORT, () => {

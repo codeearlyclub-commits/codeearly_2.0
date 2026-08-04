@@ -127,3 +127,10 @@ jobs:
       # invoice PAID, receipt sent, ledger balanced — said it had worked.
       - name: Payment grants access
         run: npx tsx scripts/check-fulfilment.ts
+
+      # Over HTTP, against the built server, because the thing under test IS the
+      # cookie and redirect behaviour — a service-level test cannot see a
+      # Set-Cookie header. A child on the family laptop once had both sessions
+      # at once and could walk into billing; this makes that unshippable.
+      - name: Audiences stay separated
+        run: npx tsx scripts/check-session-isolation.ts

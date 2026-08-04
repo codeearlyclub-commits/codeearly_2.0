@@ -14,12 +14,13 @@
  * than the labels, and the tables are what the job actually is. The rail can be
  * pinned open for anyone who disagrees.
  */
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import "@/styles/admin.css";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getChildSession, CHILD_SESSION_COOKIE } from "@/lib/child-session";
 import { AdminRail } from "./AdminRail";
 import { CommandPalette } from "./CommandPalette";
 
@@ -29,7 +30,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await auth.api.getSession({ headers: await headers() });
   const role = (session?.user as { role?: string } | undefined)?.role;
 
-  if (!session?.user) redirect("/login");
+  // Checked first, and unconditionally: a browser holding a child session does
+  // not render the admin, whatever else it is carrying. Staff whose own child
+  // is signed in on their laptop is a real scenario, not a hypothetical.
+  const childToken = (await cookies()).get(CHILD_SESSION_COOKIE)?.value;
+  if (childToken && (await getChildSession(childToken))) redirect("/me");
+
+  if (!session?.user) redirect("/staff");
   if (role !== "admin") {
     // Not a 403 page: a signed-in parent poking at /admin should see the same
     // thing they would see if the route did not exist.

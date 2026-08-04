@@ -113,13 +113,18 @@ export function AdminRail({
         ))}
       </nav>
 
+      {/* No link back to the portal. The admin is a staff tool and the portal is
+          the parent product; cross-linking them made it ambiguous which surface
+          you were on. Signing out returns to the staff door. */}
       <div className="rail__foot">
-        <Link href="/portal" className="rail__link" title="Back to the parent portal">
-          <span className="rail__icon" aria-hidden>
-            ←
-          </span>
-          <span className="rail__label">Back to portal</span>
-        </Link>
+        <form action="/api/admin/sign-out" method="post">
+          <button type="submit" className="rail__link rail__signout" title="Sign out">
+            <span className="rail__icon" aria-hidden>
+              ⏻
+            </span>
+            <span className="rail__label">Sign out</span>
+          </button>
+        </form>
         <p className="rail__email" title={email}>
           {email}
         </p>

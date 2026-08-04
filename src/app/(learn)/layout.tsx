@@ -21,6 +21,11 @@ export default async function LearnLayout({ children }: { children: React.ReactN
   const token = (await cookies()).get(CHILD_SESSION_COOKIE)?.value;
   const child = await getChildSession(token);
 
+  // A CHILD session is required — a parent session does not substitute for one,
+  // and deliberately never will. Everything below reads and writes progress
+  // against `child.childId`; letting a parent in would mean writing a parent's
+  // activity onto a child's record, and there is no correct childId to use.
+  //
   // Sent to the student sign-in, not the parent one. A child bounced to a page
   // asking for an email address has no way forward.
   if (!child) redirect("/student");

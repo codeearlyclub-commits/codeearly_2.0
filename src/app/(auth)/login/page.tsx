@@ -1,74 +1,123 @@
-"use client";
-
 /**
- * Parent sign-in.
+ * The one sign-in door on the website.
  *
- * Children do not sign in here — they have their own page at /student, because
- * a code-and-PIN form and an email-and-password form are different shapes and
- * merging them would confuse both audiences.
+ * WHY A CHOOSER RATHER THAN ONE FORM
+ *
+ * A parent signs in with an email and a password. A child signs in with a
+ * six-character code and a four-digit PIN, issued by their parent, with no
+ * email address anywhere. Those are not two skins on one form — they are
+ * different credentials, different validation, different recovery (a child has
+ * none; their parent reissues), and different readers, one of whom is seven.
+ *
+ * Merging them produces a form that asks a child for something they do not have
+ * and a parent for something they were never given. So the site has one place to
+ * start, and it asks who you are first.
+ *
+ * A server component: if this browser already holds a session it says so, rather
+ * than presenting a blank form to someone who is in fact already signed in.
  */
-import { useState } from "react";
+import type { Metadata } from "next";
+import { headers, cookies } from "next/headers";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-import { signIn } from "@/lib/auth-client";
+import { auth } from "@/lib/auth";
+import { getChildSession, CHILD_SESSION_COOKIE } from "@/lib/child-session";
+import { AuthBrand } from "../AuthBrand";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to CodeEarly Club — parents, students and staff.",
+};
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError(null);
-    setPending(true);
+export const dynamic = "force-dynamic";
 
-    const form = new FormData(e.currentTarget);
-    const result = await signIn.email({
-      email: String(form.get("email") ?? "").trim(),
-      password: String(form.get("password") ?? ""),
-    });
-
-    setPending(false);
-    if (result.error) {
-      // Better Auth distinguishes "unverified" from "wrong credentials", and
-      // that one IS worth surfacing — otherwise a parent who never clicked the
-      // link has no idea why a correct password is being rejected.
-      setError(result.error.message ?? "That email or password isn't right.");
-      return;
-    }
-    router.push("/portal");
-    router.refresh();
-  }
+export default async function LoginChooserPage() {
+  const [session, jar] = await Promise.all([
+    auth.api.getSession({ headers: await headers() }),
+    cookies(),
+  ]);
+  const child = await getChildSession(jar.get(CHILD_SESSION_COOKIE)?.value);
 
   return (
-    <main className="auth-card">
-      <h1>Sign in</h1>
+    <main className="auth">
+      <AuthBrand />
 
-      <form onSubmit={onSubmit}>
-        <label>
-          Email
-          <input name="email" type="email" required autoComplete="email" />
-        </label>
+      <div className="auth__card">
+        <h1>Welcome back</h1>
+        <p className="auth__lede">Who&apos;s signing in?</p>
 
-        <label>
-          Password
-          <input name="password" type="password" required autoComplete="current-password" />
-        </label>
+        {/* Told, not silently overridden. Signing in as one audience ends the
+            other's session, and someone should know that before they do it. */}
+        {child && (
+          <p className="auth__switch">
+            <span aria-hidden>👋</span>
+            <span>
+              <b>{child.displayName}</b> is signed in on this device.{" "}
+              <Link href="/me">Go to their lessons</Link>, or sign in below to
+              switch — that will sign them out.
+            </span>
+          </p>
+        )}
 
-        {error && <p role="alert" className="error">{error}</p>}
+        {!child && session?.user && (
+          <p className="auth__switch">
+            <span aria-hidden>👋</span>
+            <span>
+              You&apos;re signed in as <b>{session.user.email}</b>.{" "}
+              <Link href="/portal">Go to your portal</Link>.
+            </span>
+          </p>
+        )}
 
-        <button type="submit" disabled={pending}>
-          {pending ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+        <div className="auth__choices">
+          <Link
+            className="auth__choice"
+            href="/login/parent"
+            style={{ "--tint-bg": "var(--green-light)" } as React.CSSProperties}
+          >
+            <span className="auth__choice-icon" aria-hidden>
+              👩🏽
+            </span>
+            <span className="auth__choice-main">
+              <span className="auth__choice-title">I&apos;m a parent</span>
+              <span className="auth__choice-sub">
+                Sign in with your email and password to manage your children,
+                courses and payments.
+              </span>
+            </span>
+            <span className="auth__choice-arrow" aria-hidden>
+              →
+            </span>
+          </Link>
 
-      <p className="muted">
-        New here? <Link href="/register">Create an account</Link>
-      </p>
-      <p className="muted">
-        Are you a student? <Link href="/student">Sign in with your code</Link>
-      </p>
+          <Link
+            className="auth__choice"
+            href="/student"
+            style={{ "--tint-bg": "var(--purple-light)" } as React.CSSProperties}
+          >
+            <span className="auth__choice-icon" aria-hidden>
+              🧒🏽
+            </span>
+            <span className="auth__choice-main">
+              <span className="auth__choice-title">I&apos;m a student</span>
+              <span className="auth__choice-sub">
+                Use the code and PIN your parent gave you. No email needed.
+              </span>
+            </span>
+            <span className="auth__choice-arrow" aria-hidden>
+              →
+            </span>
+          </Link>
+        </div>
+
+        <p className="auth__staff">
+          New to CodeEarly? <Link href="/register">Create a parent account</Link>
+          <br />
+          <span style={{ opacity: 0.75 }}>
+            CodeEarly staff? <Link href="/staff">Sign in here</Link>
+          </span>
+        </p>
+      </div>
     </main>
   );
 }

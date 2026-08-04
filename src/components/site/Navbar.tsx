@@ -56,6 +56,22 @@ export function Navbar() {
   const { data: session } = authClient.useSession();
   const member = session?.user ?? null;
 
+  /**
+   * The child session is our own httpOnly cookie, not Better Auth's, so it has
+   * to be asked for. Without this a signed-in child browsing the marketing site
+   * is told to "Sign in" while they are already signed in — and the button sends
+   * them to a form asking for an email address they do not have.
+   */
+  const [child, setChild] = useState<{ displayName: string } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/student/session", { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => setChild(body?.child ?? null))
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
   async function signOut() {
     setSigningOut(true);
     await authClient.signOut().catch(() => {});
@@ -183,7 +199,21 @@ export function Navbar() {
           </ul>
         </li>
 
-        {member ? (
+        {/* A child first: their session is the more specific one, and the two
+            can no longer coexist, so this ordering is a belt-and-braces
+            statement of which wins if they somehow do. */}
+        {child ? (
+          <li className="nav-auth-group">
+            <Link className="nav-cta" href="/me" onClick={() => setOpen(false)}>
+              My lessons
+            </Link>
+            <form action="/api/student/logout" method="post">
+              <button className="nav-signout" type="submit">
+                Sign out
+              </button>
+            </form>
+          </li>
+        ) : member ? (
           <li className="nav-auth-group">
             <Link className="nav-cta" href="/portal" onClick={() => setOpen(false)}>
               My Portal

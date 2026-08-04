@@ -1,0 +1,236 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Sign-in.
+
+   Three audiences, three doors, one shell. A parent types an email and
+   password; a child types a six-character code and a four-digit PIN; staff use
+   the same credentials as a parent but land somewhere else entirely.
+
+   The child's door is sized for a seven-year-old on a tablet — big targets,
+   big type, no jargon, and no link out of the flow that could strand them on a
+   page asking for an email address they do not have.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.auth {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(0, 200, 150, 0.1), transparent 70%),
+    var(--off);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(1.5rem, 5vh, 3.5rem) 1rem 3rem;
+}
+
+.auth__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: 1.35rem;
+  color: var(--navy);
+  margin-bottom: clamp(1.25rem, 4vh, 2.25rem);
+}
+.auth__brand span { color: var(--green); }
+
+.auth__card {
+  width: 100%;
+  max-width: 27rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  padding: clamp(1.5rem, 4vw, 2.25rem);
+}
+.auth__card--wide { max-width: 34rem; }
+
+.auth__card h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
+  color: var(--navy);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 0.4rem;
+}
+.auth__lede { color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem; }
+
+/* ── The chooser ──────────────────────────────────────────────────────────── */
+
+.auth__choices { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.auth__choice {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+.auth__choice:hover {
+  border-color: var(--green);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.auth__choice-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 1.5rem;
+  background: var(--tint-bg, var(--green-light));
+}
+.auth__choice-main { min-width: 0; flex: 1; }
+.auth__choice-title {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 800;
+  font-size: 1.02rem;
+  color: var(--navy);
+}
+.auth__choice-sub { font-size: 0.84rem; color: var(--muted); line-height: 1.5; margin-top: 0.1rem; }
+.auth__choice-arrow { color: var(--muted); font-size: 1.1rem; flex-shrink: 0; }
+.auth__choice:hover .auth__choice-arrow { color: var(--green-dark); }
+
+/* Staff sits apart from the two family doors — quieter, and clearly not for
+   parents or children. */
+.auth__staff {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.auth__staff a { color: var(--blue-mid); font-weight: 700; text-decoration: none; }
+.auth__staff a:hover { color: var(--green-dark); }
+
+/* ── Forms ────────────────────────────────────────────────────────────────── */
+
+.auth__form { display: flex; flex-direction: column; gap: 1rem; }
+.auth__form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--navy);
+}
+.auth__form input {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--text);
+}
+.auth__form input:focus {
+  outline: none;
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px rgba(0, 200, 150, 0.12);
+}
+
+.auth__submit {
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--green);
+  color: var(--navy);
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+.auth__submit:hover { filter: brightness(1.05); transform: translateY(-1px); }
+.auth__submit[disabled] { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.auth__error {
+  background: var(--pink-light);
+  border: 1px solid var(--pink);
+  color: #9f1239;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.auth__alt {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.auth__alt a { color: var(--blue-mid); font-weight: 700; text-decoration: none; }
+.auth__alt a:hover { color: var(--green-dark); }
+
+/* ── The child's door ─────────────────────────────────────────────────────── */
+
+.auth--kid {
+  background:
+    radial-gradient(900px 520px at 50% -10%, rgba(155, 109, 255, 0.14), transparent 70%),
+    var(--off);
+}
+.auth--kid .auth__card { max-width: 25rem; text-align: center; }
+.auth--kid .auth__card h1 { font-size: clamp(1.6rem, 6vw, 2.1rem); }
+
+/* Deliberately oversized. A six-year-old on a tablet is copying characters off
+   a piece of paper, and small boxes with tight tracking is where that goes
+   wrong. */
+.auth__kidfield {
+  font-family: var(--font-nunito), sans-serif !important;
+  font-size: 1.65rem !important;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 0.28em;
+  padding: 0.8rem 0.5rem !important;
+  text-indent: 0.28em; /* re-centres text that letter-spacing pushes left */
+}
+.auth--kid .auth__form label { align-items: center; font-size: 0.95rem; }
+.auth--kid .auth__submit { font-size: 1.1rem; padding: 0.95rem 1.4rem; }
+.auth__kidhint { font-size: 0.85rem; color: var(--muted); line-height: 1.6; margin-top: 1.25rem; }
+
+/* ── Staff door ───────────────────────────────────────────────────────────── */
+
+.auth--staff { background: linear-gradient(180deg, #0d1b3e 0%, #0a1428 100%); }
+.auth--staff .auth__brand { color: #fff; }
+.auth--staff .auth__card { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+.auth--staff .auth__card h1 { color: #fff; }
+.auth--staff .auth__lede { color: rgba(240, 244, 255, 0.6); }
+.auth--staff .auth__form label { color: rgba(240, 244, 255, 0.85); }
+.auth--staff .auth__form input {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+.auth--staff .auth__alt { border-color: rgba(255, 255, 255, 0.1); color: rgba(240, 244, 255, 0.5); }
+.auth--staff .auth__alt a { color: var(--green); }
+
+/* ── Signed-in notice ─────────────────────────────────────────────────────────
+   Shown when a browser already holds a session for a different audience. It
+   explains the switch rather than silently ending someone else's session. */
+.auth__switch {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--yellow-light);
+  border: 1px solid var(--yellow);
+  font-size: 0.86rem;
+  color: var(--navy);
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+.auth__switch a { color: var(--blue-mid); font-weight: 700; }

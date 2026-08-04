@@ -33,7 +33,16 @@ function isCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function PortalNavBar({ isAdmin }: { isAdmin: boolean }) {
+/**
+ * There is deliberately NO link to /admin here.
+ *
+ * The portal is the parent product and the admin is the staff tool; they are
+ * different applications that happen to share a sign-in. Advertising one from
+ * the other blurs which surface you are on — and it put a one-click route from a
+ * family's screen into the staff tool, on a laptop children use. Staff reach the
+ * admin through /staff.
+ */
+export function PortalNavBar() {
   const pathname = usePathname();
 
   return (
@@ -50,11 +59,6 @@ export function PortalNavBar({ isAdmin }: { isAdmin: boolean }) {
       <Link href="/portal/account" className={pathname === "/portal/account" ? "is-current" : undefined}>
         Account
       </Link>
-      {isAdmin && (
-        <Link href="/admin" className="portal-bar__admin">
-          Admin
-        </Link>
-      )}
     </nav>
   );
 }

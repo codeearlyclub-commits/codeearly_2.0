@@ -15,23 +15,16 @@ import Link from "next/link";
 
 import "@/styles/portal.css";
 import { auth } from "@/lib/auth";
+import { PortalNavBar, PortalTabs } from "./portal/PortalNav";
 
 export const dynamic = "force-dynamic";
-
-const NAV = [
-  { href: "/portal", label: "Home" },
-  { href: "/portal/courses", label: "Courses" },
-  { href: "/portal/programs", label: "Programs" },
-  { href: "/portal/invoices", label: "Payments" },
-  { href: "/portal/records", label: "Reports" },
-  { href: "/portal/account", label: "Account" },
-];
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/login");
 
   const role = (session.user as { role?: string }).role;
+  const name = session.user.name || session.user.email;
 
   return (
     <div className="portal-shell">
@@ -41,22 +34,25 @@ export default async function PortalLayout({ children }: { children: React.React
             Code<span>Early</span>
           </Link>
 
-          <nav className="portal-bar__nav">
-            {NAV.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
-            ))}
-            {role === "admin" && (
-              <Link href="/admin" className="portal-bar__admin">
-                Admin
-              </Link>
-            )}
-          </nav>
+          <PortalNavBar isAdmin={role === "admin"} />
+
+          <div className="portal-bar__who">
+            <Link
+              href="/portal/account"
+              className="portal-bar__avatar"
+              aria-label={`Account — signed in as ${name}`}
+              title={name}
+            >
+              {name.slice(0, 1).toUpperCase()}
+            </Link>
+          </div>
         </div>
       </header>
 
       <div className="portal-body">{children}</div>
+
+      {/* Phones only. Hidden at 860px, where the top bar takes over. */}
+      <PortalTabs />
     </div>
   );
 }

@@ -51,20 +51,31 @@ export default async function PortalProgramsPage() {
   }
 
   return (
-    <main className="portal-page">
-      <h1>Programs</h1>
+    <>
+      <header className="portal-head">
+        <h1>Programs</h1>
+        <p>Live classes in a small group, over a fixed few weeks.</p>
+      </header>
 
       {children.length === 0 && (
-        <div className="notice">
+        <div className="pnotice pnotice--warn">
           <h2>Add a child first</h2>
-          <p>
-            Programs are registered per child. <Link href="/portal">Add your first child</Link>.
-          </p>
+          <p>Programs are registered per child, so we need to know who is coming.</p>
+          <Link className="pbtn pbtn--primary" href="/portal">
+            Add a child →
+          </Link>
         </div>
       )}
 
       {programs.length === 0 ? (
-        <p className="muted">No programs are open right now.</p>
+        <div className="pempty">
+          <div className="pempty__icon">🗓️</div>
+          <h3>No programs are open right now</h3>
+          <p>
+            We run these around school holidays. Have a look at{" "}
+            <Link href="/portal/courses">the self-paced courses</Link> in the meantime.
+          </p>
+        </div>
       ) : (
         <div className="portal-grid">
           {programs.map((program) => {
@@ -79,55 +90,90 @@ export default async function PortalProgramsPage() {
             const bookable = !closed && left !== 0 && children.length > 0;
 
             return (
-              <article key={program.id} className="panel">
-                <h3>{program.title}</h3>
-                {program.description && <p className="muted">{program.description}</p>}
-
-                <dl className="facts">
-                  {program.startDate && (
-                    <div>
-                      <dt>Starts</dt>
-                      <dd>{dateFmt.format(program.startDate)}</dd>
-                    </div>
+              <article className="pcard" key={program.id}>
+                <div
+                  style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.6rem" }}
+                >
+                  <span className="ppill">{program.type}</span>
+                  {left !== null && left > 0 && left <= 5 && (
+                    <span className="ppill ppill--pending">only {left} left</span>
                   )}
-                  {program.ageRange && (
-                    <div>
-                      <dt>Ages</dt>
-                      <dd>{program.ageRange}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt>Seats</dt>
-                    <dd>
-                      {left === null ? "Unlimited" : left === 0 ? "Full" : `${left} left`}
-                    </dd>
-                  </div>
-                </dl>
+                  {closed && <span className="ppill ppill--muted">closed</span>}
+                  {left === 0 && <span className="ppill ppill--failed">full</span>}
+                </div>
 
-                {mine.length > 0 && (
-                  <p className="checkout__ok">
-                    Registered: {mine.join(", ")}
+                <h3
+                  style={{
+                    fontFamily: "var(--font-nunito), sans-serif",
+                    fontWeight: 800,
+                    fontSize: "1.1rem",
+                    color: "var(--navy)",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  {program.title}
+                </h3>
+
+                {program.description && (
+                  <p style={{ fontSize: "0.88rem", color: "var(--muted)", lineHeight: 1.65 }}>
+                    {program.description.length > 160
+                      ? `${program.description.slice(0, 160).trimEnd()}…`
+                      : program.description}
                   </p>
                 )}
 
-                {closed ? (
-                  <p className="muted">Registration has closed.</p>
-                ) : left === 0 ? (
-                  <p className="muted">Fully booked.</p>
-                ) : bookable ? (
-                  <CheckoutButton
-                    kind="program"
-                    itemId={program.id}
-                    kids={kids}
-                    label={program.priceKobo === 0 ? "Register" : "Register and pay"}
-                    price={formatPrice(program.priceKobo)}
-                  />
-                ) : null}
+                <div className="child-card__figures" style={{ marginTop: "0.9rem" }}>
+                  <div className="child-card__figure">
+                    <b style={{ fontSize: "0.95rem" }}>
+                      {program.startDate ? dateFmt.format(program.startDate).split(" ").slice(0, 2).join(" ") : "TBC"}
+                    </b>
+                    <span>starts</span>
+                  </div>
+                  <div className="child-card__figure">
+                    <b style={{ fontSize: "0.95rem" }}>{program.ageRange ?? "All"}</b>
+                    <span>ages</span>
+                  </div>
+                  <div className="child-card__figure">
+                    <b style={{ fontSize: "0.95rem" }}>
+                      {left === null ? "∞" : left}
+                    </b>
+                    <span>seats left</span>
+                  </div>
+                </div>
+
+                {mine.length > 0 && (
+                  <p
+                    className="pnotice pnotice--good"
+                    style={{ margin: "0.9rem 0 0", padding: "0.6rem 0.85rem", fontSize: "0.85rem" }}
+                  >
+                    Registered: <b>{mine.join(", ")}</b>
+                  </p>
+                )}
+
+                <div style={{ marginTop: "0.9rem" }}>
+                  {closed ? (
+                    <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
+                      Registration has closed.
+                    </p>
+                  ) : left === 0 ? (
+                    <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
+                      Fully booked — <Link href="/contact">ask about the next one</Link>.
+                    </p>
+                  ) : bookable ? (
+                    <CheckoutButton
+                      kind="program"
+                      itemId={program.id}
+                      kids={kids}
+                      label={program.priceKobo === 0 ? "Register" : "Register and pay"}
+                      price={formatPrice(program.priceKobo)}
+                    />
+                  ) : null}
+                </div>
               </article>
             );
           })}
         </div>
       )}
-    </main>
+    </>
   );
 }

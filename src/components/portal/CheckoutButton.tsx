@@ -34,7 +34,11 @@ export function CheckoutButton({
   const [error, setError] = useState<string | null>(null);
 
   if (kids.length === 0) {
-    return <p className="muted">Add a child first to enrol them.</p>;
+    return (
+      <p style={{ fontSize: "0.85rem", color: "var(--muted)", margin: 0 }}>
+        Add a child first to enrol them.
+      </p>
+    );
   }
 
   async function go() {
@@ -87,13 +91,19 @@ export function CheckoutButton({
         </label>
       )}
 
-      <button type="button" className="btn btn--primary" onClick={go} disabled={busy}>
-        {busy ? "Working…" : label}
-      </button>
-      <span className="checkout__price">{price}</span>
+      <div className="checkout__go">
+        <button type="button" className="pbtn pbtn--primary" onClick={go} disabled={busy}>
+          {busy ? "Working…" : label}
+        </button>
+        <span className="checkout__price">{price}</span>
+      </div>
 
       {message && <p className="checkout__ok">{message}</p>}
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && (
+        <p role="alert" className="checkout__error">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

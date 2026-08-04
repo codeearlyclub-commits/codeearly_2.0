@@ -35,10 +35,14 @@ export function PayButton({ invoiceNumber }: { invoiceNumber: string }) {
 
   return (
     <>
-      <button type="button" className="btn btn--primary" onClick={pay} disabled={busy}>
+      <button type="button" className="pbtn pbtn--primary" onClick={pay} disabled={busy}>
         {busy ? "Opening…" : "Pay now"}
       </button>
-      {error && <p role="alert" className="error">{error}</p>}
+      {error && (
+        <p role="alert" className="pnotice pnotice--warn" style={{ width: "100%", margin: "0.5rem 0 0" }}>
+          {error}
+        </p>
+      )}
     </>
   );
 }

@@ -12,6 +12,7 @@ export function SignOutButton() {
   return (
     <button
       type="button"
+      className="pbtn"
       disabled={pending}
       onClick={async () => {
         setPending(true);

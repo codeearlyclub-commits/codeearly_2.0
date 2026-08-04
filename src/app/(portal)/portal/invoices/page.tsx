@@ -14,6 +14,12 @@ import { PayButton } from "@/components/portal/PayButton";
 
 export const dynamic = "force-dynamic";
 
+const dateFmt = new Intl.DateTimeFormat("en-NG", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+
 export default async function PortalInvoicesPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) redirect("/login");
@@ -24,76 +30,76 @@ export default async function PortalInvoicesPage() {
   const owed = unpaid.reduce((sum, i) => sum + i.amountKobo, 0);
 
   return (
-    <main className="portal-page">
-      <h1>Payments</h1>
+    <>
+      <header className="portal-head">
+        <h1>Payments</h1>
+        <p>Every invoice on your account, and receipts for what you have paid.</p>
+      </header>
 
       {invoices.length === 0 && (
-        <p className="muted">
-          Nothing to pay. Invoices appear here when you enrol a child in a paid
-          course or program.
-        </p>
+        <div className="pempty">
+          <div className="pempty__icon">🧾</div>
+          <h3>Nothing to pay</h3>
+          <p>
+            Invoices appear here when you enrol a child on a paid course or program.
+          </p>
+        </div>
       )}
 
       {unpaid.length > 0 && (
-        <section className="panel panel--warn">
-          <h2>
-            {unpaid.length} unpaid · {formatNaira(owed)}
-          </h2>
-          <ul className="invoice-list">
-            {unpaid.map((invoice) => (
-              <li key={invoice.id}>
-                <div>
-                  <b>{invoice.description}</b>
-                  <br />
-                  <span className="muted">
-                    {invoice.invoiceNumber}
-                    {invoice.dueDate &&
-                      ` · due ${invoice.dueDate.toLocaleDateString("en-NG")}`}
-                  </span>
+        <section className="portal-section">
+          <div className="money-strip money-strip--owing" style={{ marginBottom: "1rem" }}>
+            <div className="money-strip__main">
+              <div className="money-strip__label">Outstanding</div>
+              <div className="money-strip__value">{formatNaira(owed)}</div>
+              <div className="money-strip__note">
+                across {unpaid.length} invoice{unpaid.length === 1 ? "" : "s"}
+              </div>
+            </div>
+          </div>
+
+          {unpaid.map((invoice) => (
+            <div className="prow" key={invoice.id}>
+              <div className="prow__main">
+                <div className="prow__title">{invoice.description}</div>
+                <div className="prow__sub">
+                  {invoice.invoiceNumber}
+                  {invoice.dueDate ? ` · due ${dateFmt.format(invoice.dueDate)}` : ""}
                 </div>
-                <div className="invoice-list__pay">
-                  <b>{formatNaira(invoice.amountKobo)}</b>
-                  <PayButton invoiceNumber={invoice.invoiceNumber} />
-                </div>
-              </li>
-            ))}
-          </ul>
+              </div>
+              <div className="prow__end">
+                <span className="prow__amount">{formatNaira(invoice.amountKobo)}</span>
+                <PayButton invoiceNumber={invoice.invoiceNumber} />
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
       {settled.length > 0 && (
-        <section className="panel">
-          <h2>History</h2>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Invoice</th>
-                <th>For</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Paid</th>
-              </tr>
-            </thead>
-            <tbody>
-              {settled.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td><code>{invoice.invoiceNumber}</code></td>
-                  <td>{invoice.description}</td>
-                  <td>{formatNaira(invoice.amountKobo)}</td>
-                  <td>
-                    <span className={`pill pill--${invoice.status.toLowerCase()}`}>
-                      {invoice.status}
-                    </span>
-                  </td>
-                  <td>
-                    {invoice.paidAt ? invoice.paidAt.toLocaleDateString("en-NG") : "—"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <section className="portal-section">
+          <div className="portal-section__head">
+            <h2>History</h2>
+          </div>
+          {settled.map((invoice) => (
+            <div className="prow" key={invoice.id}>
+              <div className="prow__main">
+                <div className="prow__title">{invoice.description}</div>
+                <div className="prow__sub">
+                  {invoice.invoiceNumber}
+                  {invoice.paidAt ? ` · paid ${dateFmt.format(invoice.paidAt)}` : ""}
+                </div>
+              </div>
+              <div className="prow__end">
+                <span className="prow__amount">{formatNaira(invoice.amountKobo)}</span>
+                <span className={`ppill ppill--${invoice.status.toLowerCase()}`}>
+                  {invoice.status}
+                </span>
+              </div>
+            </div>
+          ))}
         </section>
       )}
-    </main>
+    </>
   );
 }

@@ -17,6 +17,174 @@
   background: var(--off);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   The child's own dashboard (me-*).
+
+   This is where the gamification lives, and only here. The parent portal shows
+   the same underlying facts as plain figures, because XP motivates a nine-year
+   -old and tells a parent nothing about whether the money is working.
+
+   Every number on this screen is derived from something the child actually
+   finished — see server/lms/progression.ts. Nothing rewards time spent or
+   logging in, so the ring cannot be filled by leaving a tab open.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.me-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0b1628 0%, #1a2a4a 55%, #2d1b5e 100%);
+  color: #fff;
+  padding: 32px clamp(16px, 4vw, 48px) 36px;
+}
+.me-hero__blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+}
+.me-hero__blob--1 { width: 280px; height: 280px; background: rgba(0, 200, 150, 0.16); top: -90px; right: -50px; }
+.me-hero__blob--2 { width: 220px; height: 220px; background: rgba(155, 109, 255, 0.18); bottom: -80px; left: 30%; }
+
+.me-hero__inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+.me-hero__left { flex: 1; min-width: 260px; }
+.me-hero__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(0, 200, 150, 0.85);
+  margin-bottom: 8px;
+}
+.me-hero h1 {
+  font-family: var(--font-nunito), sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 4.5vw, 2.3rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin-bottom: 14px;
+}
+.me-hero h1 span { color: var(--green); }
+
+.me-chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.me-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.me-chip--level { background: rgba(0, 200, 150, 0.18); border-color: rgba(0, 200, 150, 0.4); }
+.me-chip--streak { background: rgba(255, 140, 66, 0.2); border-color: rgba(255, 140, 66, 0.45); }
+.me-chip--cold { opacity: 0.65; }
+
+/* The XP ring. An SVG rather than a conic-gradient so the sweep animates and
+   the centre stays crisp at any size. */
+.me-ring { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.me-ring__wrap { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+.me-ring__wrap svg { transform: rotate(-90deg); }
+.me-ring__track { stroke: rgba(255, 255, 255, 0.12); }
+.me-ring__fill { stroke: var(--green); stroke-linecap: round; transition: stroke-dashoffset 0.9s ease; }
+.me-ring__centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.me-ring__num {
+  font-family: var(--font-nunito), sans-serif;
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.me-ring__label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+}
+.me-ring__next { min-width: 150px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.65); line-height: 1.5; }
+.me-ring__next b { color: #fff; }
+
+/* Stat tiles */
+.me-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+}
+@media (min-width: 620px) { .me-stats { grid-template-columns: repeat(4, 1fr); } }
+
+.me-stat {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 16px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.me-stat::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--tint, var(--green));
+}
+.me-stat__icon { font-size: 1.35rem; line-height: 1; margin-bottom: 4px; }
+.me-stat__value {
+  font-family: var(--font-nunito), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--navy);
+  line-height: 1;
+}
+.me-stat__label { font-size: 0.75rem; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+/* Badges */
+.me-badges {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 12px;
+}
+.me-badge {
+  text-align: center;
+  padding: 14px 8px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+.me-badge__icon { font-size: 1.7rem; line-height: 1; }
+.me-badge__label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--navy);
+  margin-top: 6px;
+  line-height: 1.25;
+}
+.me-badge__hint { font-size: 0.66rem; color: var(--muted); margin-top: 3px; line-height: 1.3; }
+/* Locked badges stay visible: a badge you can see is a goal, one that only
+   appears once earned is a surprise nobody worked towards. */
+.me-badge--locked { background: var(--off); border-style: dashed; }
+.me-badge--locked .me-badge__icon { filter: grayscale(1); opacity: 0.4; }
+.me-badge--locked .me-badge__label { color: var(--muted); }
+
 /* ── Course overview ─────────────────────────────────────────────────────── */
 
 .learn-hero {

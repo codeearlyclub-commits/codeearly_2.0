@@ -23,6 +23,8 @@
  * test and a single-host deployment is a legitimate configuration.
  */
 import "dotenv/config";
+import http from "node:http";
+import https from "node:https";
 
 const BASE =
   process.env.CHECK_BASE_URL ?? process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
@@ -34,17 +36,85 @@ function check(label: string, ok: boolean, detail = "") {
   if (!ok) failures++;
 }
 
-/** Fetch a path, pretending to arrive on `host`. */
-async function get(path: string, host?: string) {
+/**
+ * Request a path, pretending to arrive on `host`.
+ *
+ * DELIBERATELY node:http, NOT fetch.
+ *
+ * `Host` is a forbidden header name in the fetch spec, and Node's fetch drops it
+ * silently — no error, no warning. Every request then arrives as the main host,
+ * so the admin-host half of this file reported eight failures against code that
+ * was working correctly. Proven by sending the same two requests both ways:
+ *
+ *   /admin   node:http=307 (right)   fetch=404 (wrong)
+ *   /blog    node:http=404 (right)   fetch=200 (wrong)
+ *
+ * This is the second time a forbidden-header rule has produced a fake failure
+ * here; see the Origin note in check-session-isolation.ts.
+ */
+function get(path: string, host?: string): Promise<{ status: number; location: string | null }> {
   const url = new URL(path, BASE);
+  const secure = url.protocol === "https:";
+  const client = secure ? https : http;
+
   const headers: Record<string, string> = { accept: "text/html" };
-  if (host) {
-    // Preserve the port — the app compares hostnames, but Better Auth and any
-    // redirect building compare origins.
-    headers.host = url.port ? `${host}:${url.port}` : host;
-  }
-  const res = await fetch(url, { headers, redirect: "manual" });
-  return { status: res.status, location: res.headers.get("location") };
+  // Preserve the port: the app compares hostnames, but Better Auth and redirect
+  // building compare whole origins.
+  if (host) headers.host = url.port ? `${host}:${url.port}` : host;
+
+  return new Promise((resolve, reject) => {
+    const req = client.request(
+      {
+        hostname: url.hostname,
+        port: url.port || (secure ? 443 : 80),
+        path: `${url.pathname}${url.search}`,
+        method: "GET",
+        headers,
+      },
+      (res) => {
+        // Drain, or the socket stays open and the process never exits.
+        res.resume();
+        resolve({ status: res.statusCode ?? 0, location: res.headers.location ?? null });
+      }
+    );
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+/** A sign-in attempt arriving on the admin host, with a matching Origin. */
+function postSignIn(): Promise<number> {
+  const url = new URL(BASE);
+  const secure = url.protocol === "https:";
+  const client = secure ? https : http;
+  const hostHeader = url.port ? `${ADMIN_HOST}:${url.port}` : ADMIN_HOST!;
+  const body = JSON.stringify({
+    email: "nobody@example.com",
+    password: "wrong-password-here",
+  });
+
+  return new Promise((resolve, reject) => {
+    const req = client.request(
+      {
+        hostname: url.hostname,
+        port: url.port || (secure ? 443 : 80),
+        path: "/api/auth/sign-in/email",
+        method: "POST",
+        headers: {
+          host: hostHeader,
+          origin: `${url.protocol}//${hostHeader}`,
+          "content-type": "application/json",
+          "content-length": Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      }
+    );
+    req.on("error", reject);
+    req.end(body);
+  });
 }
 
 async function main() {
@@ -111,22 +181,13 @@ async function main() {
   console.log("\nAuth still works across the split");
   // Better Auth refuses an untrusted Origin. If the admin host is missing from
   // trustedOrigins, staff sign-in returns 403 on the very host it is meant for.
-  const url = new URL(BASE);
-  const adminOrigin = `${url.protocol}//${ADMIN_HOST}${url.port ? `:${url.port}` : ""}`;
-  const res = await fetch(`${BASE}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: {
-      host: url.port ? `${ADMIN_HOST}:${url.port}` : ADMIN_HOST,
-      origin: adminOrigin,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ email: "nobody@example.com", password: "wrong-password-here" }),
-    redirect: "manual",
-  });
+  // Credentials are deliberately wrong: a 401 proves the request was ACCEPTED
+  // and merely failed to authenticate, which is what we are asserting.
+  const status = await postSignIn();
   check(
     "the admin origin is trusted by Better Auth",
-    res.status !== 403,
-    `${res.status} (403 means ADMIN_HOST is missing from trustedOrigins)`
+    status !== 403,
+    `${status} (403 means ADMIN_HOST is missing from trustedOrigins)`
   );
 
   console.log(

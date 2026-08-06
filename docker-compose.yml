@@ -53,6 +53,10 @@ services:
       # .env carries NODE_ENV=development for host tooling; a container serving
       # a production build must not inherit it.
       NODE_ENV: production
+      # Splits the admin onto its own origin. Must match ADMIN_DOMAIN on caddy —
+      # Caddy routes the hostname here, and the app decides what that hostname
+      # is allowed to serve. Unset on both, and everything stays on one host.
+      ADMIN_HOST: ${ADMIN_HOST:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -116,6 +120,10 @@ services:
       - "443:443"
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:-localhost}
+      # Defaults to a hostname that can never resolve, so the admin block in the
+      # Caddyfile is inert until a real subdomain is configured. Caddy would
+      # otherwise try to fetch a certificate for an empty name and fail to start.
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.invalid}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddydata:/data

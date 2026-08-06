@@ -17,10 +17,38 @@ import { sendEmail, verificationEmail, passwordResetEmail } from "@/server/email
  * Sessions are cookie-based on web; Redis-backed secondary storage keeps
  * lookups fast and makes revocation instant.
  */
+/**
+ * Origins allowed to POST to the auth endpoints.
+ *
+ * Better Auth refuses a state-changing request whose Origin is not trusted —
+ * its CSRF defence, and the reason a sign-in from `admin.codeearly.com` would
+ * otherwise come back 403 while the identical request from `www` succeeded.
+ * (That exact failure cost an hour when the isolation check used 127.0.0.1
+ * against a baseURL of localhost.)
+ *
+ * So the admin host is added when ADMIN_HOST is configured — and only then, so
+ * a single-host deployment trusts exactly one origin.
+ */
+function trustedOrigins(): string[] {
+  const base = process.env.BETTER_AUTH_URL || "http://localhost:3000";
+  const adminHost = process.env.ADMIN_HOST?.trim();
+  if (!adminHost) return [base];
+
+  try {
+    const url = new URL(base);
+    // Same scheme and port as the main site — only the hostname differs.
+    url.hostname = adminHost;
+    return [base, url.origin];
+  } catch {
+    return [base];
+  }
+}
+
 export const auth = betterAuth({
   appName: "CodeEarly",
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
+  trustedOrigins: trustedOrigins(),
 
   database: prismaAdapter(prisma, { provider: "postgresql" }),
 

@@ -22,6 +22,17 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(16, "BETTER_AUTH_SECRET must be 16+ chars"),
   BETTER_AUTH_URL: z.string().url().default("http://localhost:3000"),
 
+  /**
+   * Hostname the staff admin is served on, e.g. `admin.codeearly.com`.
+   *
+   * Setting it SPLITS the surfaces by origin: /admin becomes unreachable on the
+   * main site, and the admin host serves nothing but the admin. Leaving it unset
+   * keeps everything on one host, which is what local development wants.
+   *
+   * Host only — no scheme, no port. The port is whatever the request arrived on.
+   */
+  ADMIN_HOST: z.string().optional(),
+
   // Optional at boot — features degrade gracefully until set.
   PAYSTACK_SECRET_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),

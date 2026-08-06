@@ -26,3 +26,51 @@
 		-Server
 	}
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Staff admin — its own hostname, same app process.
+#
+# WHY A SUBDOMAIN RATHER THAN A PATH
+#
+# A separate origin means a separate cookie jar: a session minted on the
+# marketing site is never sent here, so a compromise of the public site cannot
+# carry an administrator's credentials into the staff tool. It also gives this
+# block a whole hostname to gate, instead of trying to pattern-match a path on
+# the main site and hoping nothing slips past.
+#
+# The app enforces the same split independently — with ADMIN_HOST set, /admin
+# 404s on the main site and this host serves nothing else. Caddy is the outer
+# wall, not the only one.
+#
+# Set ADMIN_DOMAIN (e.g. admin.codeearly.com) AND ADMIN_HOST in the app's
+# environment. Leave both unset and this block simply never matches.
+# ─────────────────────────────────────────────────────────────────────────────
+
+{$ADMIN_DOMAIN:admin.invalid} {
+	encode gzip zstd
+
+	# OPTIONAL, AND RECOMMENDED ONCE YOU HAVE A FIXED IP.
+	#
+	# Uncomment to make the admin invisible from anywhere but the office or a
+	# VPN. Responds 404 rather than 403: a refusal confirms there is something
+	# here worth refusing.
+	#
+	# @offsite not remote_ip 102.89.0.0/16 41.58.0.0/16
+	# handle @offsite {
+	# 	respond 404
+	# }
+
+	reverse_proxy app:3000
+
+	header {
+		# DENY, not SAMEORIGIN: nothing should ever frame the admin.
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		# Staff URLs carry ids; do not leak them to anything they click through to.
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Keep the admin out of search indexes even if a page forgets its meta tag.
+		X-Robots-Tag "noindex, nofollow"
+		-Server
+	}
+}

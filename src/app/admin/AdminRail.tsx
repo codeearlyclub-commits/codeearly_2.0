@@ -21,6 +21,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Logo } from "@/components/brand/Logo";
 import { ADMIN_NAV, type AdminNavItem } from "./nav";
 
 const PIN_KEY = "codeearly.admin.railPinned";
@@ -68,10 +69,16 @@ export function AdminRail({
   return (
     <aside className={pinned ? "rail rail--open" : "rail"}>
       <div className="rail__top">
+        {/* Two forms, swapped by CSS rather than by JS: the square mark when the
+            rail is 68px wide, the full logo once it is pinned open. At 48px the
+            wordmark is about six pixels tall and unreadable, so shrinking the
+            real logo to fit is not an option. */}
         <Link href="/admin" className="rail__brand" title="CodeEarly admin">
-          <span className="rail__mark">CE</span>
+          <span className="rail__mark">
+            <Logo href={null} mark height={32} />
+          </span>
           <span className="rail__wordmark">
-            Code<span>Early</span>
+            <Logo href={null} height={28} onDark />
             <small>admin</small>
           </span>
         </Link>

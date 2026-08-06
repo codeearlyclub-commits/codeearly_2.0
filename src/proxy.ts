@@ -1,6 +1,10 @@
 /**
  * One identity per browser.
  *
+ * Next 16 renamed this file convention from `middleware` to `proxy`; the old
+ * name still runs but logs a deprecation on every boot. Same function, same
+ * matcher — only the filename and the exported name changed.
+ *
  * THE BUG THIS EXISTS TO PREVENT
  *
  * The parent session (Better Auth cookie) and the child session (our own
@@ -17,21 +21,19 @@
  *
  * WHAT THIS DOES NOT DO
  *
- * Middleware cannot reach Redis, so the child's session row is not revoked here
- * — only its cookie is dropped. The orphan is httpOnly, gone from the browser,
- * and expires on its own 12-hour TTL. The login form additionally calls
- * /api/student/logout, which does revoke it properly; this is the backstop for
- * every other path to the same endpoint.
+ * This runs on the Edge runtime and cannot reach Redis, so the child's session
+ * row is not revoked here — only its cookie is dropped. The orphan is httpOnly,
+ * gone from the browser, and expires on its own 12-hour TTL. The sign-in form
+ * additionally calls /api/student/logout, which does revoke it properly; this is
+ * the backstop for every other path to the same endpoint.
  */
 import { NextResponse, type NextRequest } from "next/server";
 
 const CHILD_COOKIE = "ce_child_session";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const res = NextResponse.next();
 
-  // Only sign-in/sign-up. Clearing on every /api/auth/* call would log a child
-  // out whenever any page merely READ the parent session.
   if (!req.cookies.has(CHILD_COOKIE)) return res;
 
   res.cookies.set({
@@ -45,6 +47,8 @@ export function middleware(req: NextRequest) {
   return res;
 }
 
+// Only sign-in and sign-up. Matching all of /api/auth/* would log a child out
+// whenever any page merely READ the parent session.
 export const config = {
   matcher: ["/api/auth/sign-in/:path*", "/api/auth/sign-up/:path*"],
 };

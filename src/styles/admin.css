@@ -53,31 +53,15 @@
   min-width: 0;
   flex: 1;
 }
-.rail__mark {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: var(--green);
-  color: var(--navy);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-nunito), sans-serif;
-  font-weight: 900;
-  font-size: 0.85rem;
-}
-.rail__wordmark {
-  display: none;
-  font-family: var(--font-nunito), sans-serif;
-  font-weight: 900;
-  font-size: 1rem;
-  line-height: 1.1;
-  white-space: nowrap;
-}
+/* The two logo forms. Only one is ever displayed, chosen by rail width. */
+.rail__mark { flex-shrink: 0; display: inline-flex; }
+.rail--open .rail__mark { display: none; }
+
+.rail__wordmark { display: none; white-space: nowrap; }
 .rail--open .rail__wordmark { display: block; }
-.rail__wordmark span { color: var(--green); }
 .rail__wordmark small {
   display: block;
+  margin-top: 3px;
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.14em;

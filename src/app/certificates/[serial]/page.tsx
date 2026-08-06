@@ -16,6 +16,7 @@ import Link from "next/link";
 
 import "@/styles/certificate.css";
 import { verifyCertificate } from "@/server/records/reports";
+import { Logo } from "@/components/brand/Logo";
 import { PrintButton } from "./PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +49,13 @@ export default async function CertificatePage({ params }: Props) {
       </div>
 
       <article className={`cert${revoked ? " cert--revoked" : ""}`}>
-        <p className="cert__eyebrow">CodeEarly Club</p>
+        {/* The logo, not the words. This is a document a parent prints and a
+            school looks at — the mark is what makes it read as issued by
+            somebody rather than typed up at home. Unlinked: on paper a link is
+            nothing, and the verification URL below is the real proof. */}
+        <div className="cert__brand">
+          <Logo href={null} height={48} />
+        </div>
         <h1 className="cert__title">Certificate of Completion</h1>
 
         <p className="cert__presented">This is presented to</p>

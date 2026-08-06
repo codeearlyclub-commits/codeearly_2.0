@@ -117,6 +117,11 @@
   position: relative;
 }
 
+.cert__brand { display: flex; justify-content: center; margin-bottom: 0.4rem; }
+/* Browsers strip background graphics when printing by default; a certificate
+   whose logo vanishes on paper defeats the whole point of the page. */
+.cert__brand img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
 .cert__eyebrow {
   font-size: clamp(0.7rem, 1.4vw, 0.85rem);
   font-weight: 800;

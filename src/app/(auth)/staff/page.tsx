@@ -25,7 +25,8 @@ export const metadata: Metadata = {
 export default function StaffLoginPage() {
   return (
     <main className="auth auth--staff">
-      <AuthBrand />
+      {/* The staff door is navy, so the logo needs its light chip. */}
+      <AuthBrand onDark />
 
       <div className="auth__card">
         <h1>Staff sign-in</h1>

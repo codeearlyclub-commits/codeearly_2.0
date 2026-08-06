@@ -24,15 +24,9 @@
 .auth__brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
   text-decoration: none;
-  font-family: var(--font-nunito), sans-serif;
-  font-weight: 900;
-  font-size: 1.35rem;
-  color: var(--navy);
   margin-bottom: clamp(1.25rem, 4vh, 2.25rem);
 }
-.auth__brand span { color: var(--green); }
 
 .auth__card {
   width: 100%;

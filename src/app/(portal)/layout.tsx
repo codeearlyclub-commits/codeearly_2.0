@@ -16,6 +16,7 @@ import Link from "next/link";
 import "@/styles/portal.css";
 import { auth } from "@/lib/auth";
 import { getChildSession, CHILD_SESSION_COOKIE } from "@/lib/child-session";
+import { Logo } from "@/components/brand/Logo";
 import { PortalNavBar, PortalTabs } from "./portal/PortalNav";
 
 export const dynamic = "force-dynamic";
@@ -43,9 +44,8 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="portal-shell">
       <header className="portal-bar">
         <div className="portal-bar__inner">
-          <Link href="/portal" className="portal-bar__brand">
-            Code<span>Early</span>
-          </Link>
+          {/* The bar is navy, so the logo takes its light chip. */}
+          <Logo href="/portal" height={30} onDark className="portal-bar__brand" priority />
 
           <PortalNavBar />
 

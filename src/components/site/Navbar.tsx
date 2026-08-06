@@ -14,9 +14,10 @@
  *    /portal/login and /membership?register=1.
  */
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+import { Logo } from "@/components/brand/Logo";
 
 // Imported as the client object and called as `authClient.useSession()`. A
 // destructured `useSession` import fails during SSR with "Invalid hook call" —
@@ -103,22 +104,12 @@ export function Navbar() {
       id="_nav"
       className={`public-navbar${open ? " menu-open" : ""}${scrolled ? " scrolled" : ""}`}
     >
-      <Link
-        className="nav-logo"
-        href="/"
-        aria-label="CodeEarly Club home"
-        onClick={() => setOpen(false)}
-      >
-        <Image
-          src="/logo-codeearly.png"
-          alt="CodeEarly Club"
-          width={66}
-          height={40}
-          className="public-navbar-logo-image"
-          style={{ width: "auto", height: "40px" }}
-          priority
-        />
-      </Link>
+      {/* The navbar sits on white, so no chip — the wordmark reads as drawn.
+          `display: contents` so this wrapper closes the mobile menu on tap
+          without inserting a box into the navbar's flex row. */}
+      <span onClick={() => setOpen(false)} style={{ display: "contents" }}>
+        <Logo height={40} className="nav-logo" priority />
+      </span>
 
       <ul className="nav-links" id="_navLinks">
         {navItems.map((item) => (

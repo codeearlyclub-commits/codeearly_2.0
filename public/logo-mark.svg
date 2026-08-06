@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CodeEarly Club">
   <rect width="64" height="64" rx="15" fill="#0d1b3e"/>
+  <!--
+    The sigma-form E from the CODΣ ΣARLY wordmark, drawn as a stroked polyline
+    rather than text so it renders identically everywhere with no font to load.
+    This is the compact mark: used where the full logo cannot fit legibly — the
+    collapsed admin rail, the favicon, the app icon.
+  -->
   <polyline points="43,17 21,17 33,32 21,47 43,47"
             fill="none" stroke="#00c896" stroke-width="7"
             stroke-linecap="round" stroke-linejoin="round"/>

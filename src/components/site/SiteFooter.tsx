@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 
+import { Logo } from "@/components/brand/Logo";
 import { NewsletterSignup } from "./NewsletterSignup";
 
 /**
@@ -21,16 +21,9 @@ export function SiteFooter() {
     <footer>
       <div className="footer-grid">
         <div>
-          <Link className="footer-logo" href="/">
-            <Image
-              src="/logo-codeearly.png"
-              alt="CodeEarly Club"
-              width={56}
-              height={34}
-              className="footer-logo-image"
-              style={{ width: "auto", height: "34px" }}
-            />
-          </Link>
+          {/* The footer is dark navy, so the logo takes its light chip — the
+              near-black wordmark would otherwise be invisible down here. */}
+          <Logo height={34} onDark className="footer-logo" />
           <p className="footer-desc">
             Empowering African kids aged 7 to 16 to code, create, and lead in the
             digital world.

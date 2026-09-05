@@ -1,8 +1,15 @@
-# Audit — what is actually left before migration
+# Audit — what exists, what is left, what could go wrong
 
-_Written after being told, correctly, that the backend is not finished and a
-migration would be premature. This counts the real surface rather than
-summarising progress._
+_Rewritten 2026-09-05 by counting the repository rather than summarising
+progress. Every number below came from enumerating files, models and routes in
+both codebases; V4 at `codeearly-website` is the requirements baseline because
+it is the product that is actually live._
+
+**The previous version of this file was materially wrong.** It claimed 20 API
+routes, 5 admin sections, and that the LMS did not exist in `schema.prisma`. The
+real figures are 44, 14, and the LMS core is built and covered by a CI check.
+Planning was being done against numbers a phase out of date. Corrections are
+listed in §7.
 
 ---
 
@@ -10,109 +17,216 @@ summarising progress._
 
 | | V4 (live) | 2.0 | Coverage |
 |---|---|---|---|
-| API routes | **171** | 20 | **~12%** |
-| Admin sections | **36** | 5 | **14%** |
-| Portal pages | **19** | 5 | **26%** |
-| Public pages | **16** | 4 | **25%** |
+| API routes | **175** | 44 | **25%** |
+| Pages (all) | **120** | 54 | **45%** |
+| — admin | ~71 | 19 | **27%** |
+| — portal (parent) | 27 | 6 | **22%** |
+| — public | 21 | 16 | **76%** |
+| Data models | 14 Mongo collections | **41 Prisma models** | — |
 
-2.0 has the *hard* parts — auth, money, tenancy, the quiz engine, deployment —
-built and tested. What it does not have is most of the **product surface** those
-foundations exist to serve.
+The shape of the gap has changed since the last audit. The public website is
+nearly complete, the LMS core landed, and admin went from nothing to fourteen
+sections. **What is now furthest behind is the parent portal and the long tail
+of admin tooling** — not the LMS.
 
-**Migrating now would move live data onto a platform that cannot yet display
-most of it.** There is nowhere for a report card, a certificate, a lesson, a
-blog post or a showcase project to go.
+---
 
-## 2. What is genuinely done and verified
+## 2. Built and verified
 
-- Parent accounts, child profiles, student code+PIN sign-in, restricted sessions
-- Payments: Paystack init/verify/webhook, gapless invoices, receipts, **fulfilment**
-- Member subscriptions and organisation quiz plans with snapshotted entitlements
-- Courses and programs: CRUD, catalogue, enrolment, overselling protection
-- Quiz: authoring, engine, host console, player screens, results
-- Admin: dashboard, courses, programs, quizzes, members, invoices
-- Website: home, courses, programs (+ detail pages), about, contact — on the real
-  ported V4 design
-- Infrastructure: Docker verified end to end, email via Resend, 14 CI checks,
-  48 unit tests, Android + iOS shells
+Verified means an automated check asserts it, not that it was written.
 
-## 3. What is missing — grouped by whether it needs new database models
+**Foundations**
 
-### 3a. Needs new models (the real backend work)
+- Postgres + Prisma: 41 models, 10 migrations, real FKs, cascade deletes, enums
+- Better Auth: parent accounts, roles, bearer-ready for mobile
+- Child access: student code + 4-digit PIN, 12-hour Redis session, separate
+  token namespace, 5-attempt lockout, regeneration kills live sessions
+- Session isolation: parent and child sessions evict each other; verified
+- Admin on its own origin (`ADMIN_HOST`), 16 assertions
+- Redis: sessions, rate limits, BullMQ, Socket.io adapter
+- Docker: Caddy → app + worker + realtime → Postgres + Redis, verified end to end
+- CI: migrations, idempotent seed, 7 domain checks, 74 unit tests, typecheck,
+  lint, build, webhook contract
 
-Nothing in this list exists in `schema.prisma` today. Each needs models,
-services, admin CRUD, and portal/public surfaces.
+**Domain**
 
-| Domain | Why it matters |
-|---|---|
-| **LMS: lessons, modules, content, progress** | The largest gap. A course is currently a title and a price with nothing inside it. Children cannot actually learn anything |
-| **Report cards** | A core CodeEarly deliverable — parents expect them per term |
-| **Certificates** | Issued on completion; referenced by membership IDs already printed |
-| **Student tasks / assignments** | Homework between live classes |
-| **Challenges + submissions** | The coding challenge with entries and judging |
-| **Showcase** | Student projects, the strongest marketing asset you have |
-| **Blog / magazine** | Content marketing, and a live V4 section |
-| **Events + RSVP** | Meetups, competitions, open days |
-| **Newsletter + subscribers** | With unsubscribe handling |
-| **Messages / form submissions** | Contact enquiries are currently emailed and then lost — nothing is stored |
-| **Testimonials, FAQs, partners** | Currently hardcoded in the homepage |
-| **Site content / CMS pages** | V4's `[...slug]` editable pages |
-| **Member payment plans** | `QuizPlan` covers the quiz product only; member plans are hardcoded |
-| **Notifications** | In-app notification bell |
-| **Device tokens** | Required before push can work at all |
+- Payments: Paystack init/verify/webhook, gapless invoices, receipts, fulfilment
+- Subscriptions and org quiz plans with entitlements snapshotted at purchase
+- Courses and programs: CRUD, catalogue, enrolment, oversell protection
+- **LMS core**: sections, lessons, lesson blocks, ordering, progress, resume
+  position, completion, streaks, activity log, XP — `check-lms.ts` in CI
+- Report cards and certificates: models, admin screens, public verify by serial
+- Quiz: authoring, engine, host console, player screens, results, join codes
+- Content: blog, showcase, events + RSVP, testimonials, FAQs, newsletter,
+  contact messages (stored, not just emailed)
 
-### 3b. Needs no new models — wiring only
+**Surfaces**
+
+- Public: home, about, courses (+detail), programs (+detail), blog (+post),
+  events (+detail), showcase, FAQ, contact, privacy, terms, unsubscribe
+- Portal: home, courses, programs, records, invoices, account
+- Child: `/me`, course player, lesson player
+- Admin: dashboard, courses, programs, blog, events, faqs, invoices, members,
+  messages, records, showcase, subscribers, testimonials, competitions + host
+- Mobile: Capacitor config, `android/` and `ios/` shells present
+
+---
+
+## 3. What is left
+
+### 3a. Needs new models
+
+None of these exist in `schema.prisma`.
+
+| Domain | V4 surface | Why it matters |
+|---|---|---|
+| **Student tasks / assignments** | `/admin/student-tasks`, `/member/tasks`, submissions, feedback, bulk | Homework between live classes. A core weekly touchpoint |
+| **Challenges + submissions** | `/admin/challenges`, `/member/challenges`, `/challenge/submit` | The public coding challenge, with entries and judging |
+| **LMS assignments + quizzes** | `/admin/lms/assignments/*`, `/lessons/[id]/quiz`, grading | Lessons can be authored but not assessed |
+| **Notifications** | `/admin/notifications`, `/member/notifications`, broadcast | In-app bell; also the fallback when email fails |
+| **Device tokens** | — (V4 had no push) | **Push cannot work at all without this** |
+| **Member payment plans** | `/admin/payment-plans`, `/admin/subscription-plans` | Member pricing is hardcoded. `QuizPlan` covers the quiz product only |
+| **Site pages / CMS** | `/admin/content/*`, `/admin/pages`, `/(public)/[...slug]` | Homepage copy needs a deploy to change |
+| **Partners** | homepage section | Currently hardcoded |
+
+### 3b. Wiring only — models already exist
 
 | Item | State |
 |---|---|
-| **R2 uploads** | Credentials unset, no upload service. Blocks course images, certificates, showcase |
-| **Reminder jobs** | Queue runs; processor is a `TODO` stub — no subscription-expiry or session reminders actually send |
-| **Quiz result PDFs** | Queue runs; processor is a `TODO` stub |
-| **Nightly backups** | Queue runs; processor is a `TODO` stub |
-| **FCM/APNs push** | Queue and stub worker exist; no delivery, no token registration |
-| **Password reset UI** | Better Auth supports it; no pages exist |
+| **R2 uploads** | `env.ts` names the vars; **no upload service exists**. Blocks course images, certificates, showcase, avatars |
+| **Reminder jobs** | Queue runs, processor is `TODO(Phase 3)`. No expiry, session or birthday reminders send |
+| **Quiz result PDFs** | Queue runs, processor is `TODO(Phase 4)` |
+| **Nightly backups** | Queue runs, processor is `TODO(Phase 6)`. **Nothing is backed up** |
+| **Push delivery** | Queue and stub exist; no FCM/APNs, no token registration |
+| **Password reset UI** | Better Auth supports it. **Zero pages, zero calls.** A locked-out parent has no path |
 | **Email verification resend UI** | Same |
-| **Admin: settings, admin users, maintenance mode** | Not built |
-| **Admin: payments ledger view** | Invoices exist; the payment ledger has no screen |
-| **Portal: select-child, quiz history, change password, help** | Not built |
-| **`/privacy` and `/terms`** | **Linked from the footer and currently 404** |
-| **Child portal view** | Placeholder — "lessons coming soon" |
-| **Blog/showcase/events pages** | Linked from the ported navbar; not built |
+| **Portal depth** | 21 of V4's 27 parent pages absent: select-child, quiz history, change password, settings, help, add-child, subscribe, tasks, certificates, challenges, competitions |
+| **Admin long tail** | settings, admin users, maintenance, payments ledger, api-docs, help, kahoot, newsletter compose/send, message templates and campaigns, LMS import |
+| **Child navigation** | `(learn)/layout.tsx` renders bare children — no header, no nav, sign-out buried at the bottom of `/me` |
 
-## 4. Known debt
+### 3c. Data migration
 
-| # | Item | Severity |
-|---|---|---|
-| 1 | 7 npm advisories, all dev-only ESLint tooling | Low |
-| 2 | Prisma 6 → 7 available; `package.json#prisma` config deprecated | Low |
-| 3 | Docker image is 1.33GB — `output: "standalone"` would cut it substantially | Low |
-| 4 | No e2e browser tests (Playwright) | Medium |
-| 5 | Homepage copy is hardcoded, not admin-editable | Medium |
-| 6 | Contact enquiries are emailed but never stored | Medium |
+`scripts/migrate-from-v4.ts` **does not exist.** It is referenced in
+`scripts/README.md` and ARCHITECTURE §10 as though it does. 175 V4 routes worth
+of data shapes must be mapped in FK-safe order.
+
+---
+
+## 4. Risks
+
+Ranked by what they would actually cost.
+
+### Severe
+
+**1. There are no backups.** The `backup` processor is a `TODO`. This platform
+holds payment records, invoices and children's learning history. A lost Postgres
+volume loses all of it with no recovery path. This is the highest-consequence
+item in the repository and it is a stub.
+
+**2. Queued jobs are silently dropped.** The `reminders`, `quiz` and `push`
+processors are stubs that accept a job and do nothing. Nothing errors, nothing
+alerts. Anyone reasoning about this system will assume enqueued means sent —
+subscription-expiry reminders being the sharpest case, because the failure is
+invisible until renewals quietly stop.
+
+**3. No password reset.** On a live platform with paying parents this is a
+support crisis in week one, and it is the most common auth request there is.
+
+**4. No end-to-end tests.** 74 unit tests and 12 domain checks are genuinely
+good, but nothing drives a browser. Every regression found so far in the actual
+flows — the child redirect loop, the connection-pool exhaustion, the 404 storm —
+was found by a human clicking, not by CI.
+
+### High
+
+**5. Migration is underestimated.** The script is unwritten, the mapping is
+unspecified, and V4's surface is four times ours. This is the phase most likely
+to slip, and it is scheduled last, when pressure is highest.
+
+**6. R2 blocks a whole column of work.** Certificates, showcase, course images
+and avatars all wait on credentials outstanding across three planning documents.
+
+**7. iOS cannot ship from this machine.** The `ios/` shell exists but Apple
+requires macOS to build and sign. There is no Mac in the picture and no plan
+for one.
+
+**8. Single VPS, no failover, provider undecided.** One box runs Postgres,
+Redis, the app, the worker and the realtime server. The deployment target is
+still an open question in ARCHITECTURE §13, which also blocks the mobile app — a
+Capacitor shell with no hosted URL is inert.
+
+**9. This machine is a delivery risk in its own right.** One CPU, hours-long
+installs, and a disk that reached zero bytes and corrupted the Turbopack cache,
+producing a day of phantom 404s across 97 of 98 routes. Defender exclusions have
+been outstanding since the first plan.
+
+### Medium
+
+**10. Content is hardcoded.** V4 had a CMS with nine editable sections plus
+`[...slug]` pages. Changing homepage copy in 2.0 requires a code change and a
+deploy — a regression against the live product.
+
+**11. Member pricing is hardcoded.** Changing a price is a deploy.
+
+**12. The quiz product carries duty-of-care obligations.** It deliberately puts
+strangers near children. The schema has the controls; the moderation surfaces —
+abuse reports, suspensions, host verification — are not built. It should not
+ship before they are.
+
+**13. Children's data compliance.** Privacy and terms pages exist, but there is
+no data-retention policy, no deletion-request path, and no recorded parental
+consent beyond account creation.
+
+**14. Housekeeping.** Prisma 6→7 pending, 7 dev-only npm advisories, and a
+1.33GB Docker image that `output: "standalone"` would cut substantially.
+
+---
 
 ## 5. Revised order
 
-Migration moves to **last**, and the LMS moves up — it is the reason the
-platform exists.
+The LMS core is done, so the old ordering is spent. What follows is sequenced by
+risk retired per unit of work.
 
-1. **Phase 5A — LMS core.** Lessons, modules, content blocks, progress. Admin
-   authoring, child-facing player, parent visibility. Unblocks the child portal.
-2. **Phase 5B — Uploads (R2).** Blocks images, certificates and showcase.
-3. **Phase 5C — Learner records.** Report cards, certificates, tasks. Needs 5A + 5B.
-4. **Phase 5D — Content surfaces.** Blog, showcase, events, testimonials, FAQs,
-   plus `/privacy` and `/terms` so the footer stops lying.
-5. **Phase 5E — Job processors.** Reminders, PDFs, backups, push + device tokens.
-6. **Phase 5F — Gaps.** Password reset UI, admin settings/users, payment ledger
-   view, portal odds and ends.
-7. **Phase 6 — Migration and cut-over.** Once there is somewhere for every V4
-   record to land.
+1. **5A — Make the invisible visible.** Backup processor, reminder processor,
+   failure alerting. Small, and it retires the two severe infrastructure risks.
+   *Nothing else should go first.*
+2. **5B — Auth completeness.** Password reset, verification resend, change
+   password. Live-blocking on day one.
+3. **5C — Uploads (R2).** Unblocks certificates, showcase, course images.
+4. **5D — Portal depth + child navigation.** Now the largest surface gap.
+5. **5E — Tasks, assignments, challenges.** The weekly touchpoints. Needs models.
+6. **5F — CMS + pricing.** Stop requiring a deploy to change copy or a price.
+7. **5G — Admin long tail.** Settings, users, maintenance, ledger, campaigns.
+8. **5H — E2E tests (Playwright).** Before migration, not after.
+9. **6 — Migration and cut-over.** Write the script, verify counts, switch DNS.
+10. **7 — Public quiz product.** Only after trust and safety surfaces exist.
 
-## 6. What I need from you
+---
 
-| Need | Blocks |
+## 6. Blocked on you
+
+| Need | Blocks | Age |
+|---|---|---|
+| **R2 credentials** | 5C and everything downstream | 3 planning docs |
+| **VPS provider + region** | Any deployment; mobile inert without it | 3 planning docs |
+| **Defender exclusions** | Build speed on this machine | 3 planning docs |
+| **A Mac, or a plan for one** | iOS release entirely | New |
+| Sample report card + certificate | Getting 5C right first time | 2 docs |
+| Mongo read-only URI | Phase 6 only | Not yet needed |
+
+---
+
+## 7. Corrections to the previous audit
+
+| Claim | Reality |
 |---|---|
-| **R2 credentials** | Phase 5B, and everything after it |
-| **VPS provider + region** | Any deployment; the mobile app is inert without a hosted URL |
-| Defender exclusions | Build speed — installs still take hours |
-| A sample report card + certificate | Getting 5C right first time rather than guessing |
-| Mongo read-only URI | Phase 6 only. Not needed yet |
+| 20 API routes (~12%) | **44 (25%)** |
+| 5 admin sections (14%) | **14 sections, 19 pages (27%)** |
+| "LMS: nothing exists in `schema.prisma` today" | **Built** — 6 models, 4 service modules, player UI, CI check |
+| "`/privacy` and `/terms` currently 404" | **Both exist** |
+| "Blog/showcase/events not built" | **All three built**, public and admin |
+| "Report cards, certificates missing" | **Models, admin screens and public verify built** |
+| "Contact enquiries emailed then lost" | **`ContactMessage` model + admin screen** |
+
+The lesson is not that the estimate was pessimistic — it is that the audit was
+not re-derived from the repository before being used to plan.

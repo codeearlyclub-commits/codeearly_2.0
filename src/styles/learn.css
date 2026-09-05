@@ -17,6 +17,85 @@
   background: var(--off);
 }
 
+/* ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+   The bar across every child screen.
+
+   Unlike the parent portal, this does NOT become a bottom tab bar on a phone.
+   There is one destination, so a five-across tab bar would be five ways to the
+   same page, permanently eating 56px of a small screen during a lesson. It
+   stays a single compact top bar at every width.
+   ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ */
+
+.learn-shell { min-height: 100vh; background: var(--off); }
+
+.learn-bar {
+  background: var(--navy);
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+.learn-bar__inner {
+  max-width: 1140px;
+  margin-inline: auto;
+  padding: 0.7rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.learn-bar__brand { display: inline-flex; align-items: center; flex-shrink: 0; }
+
+.learn-bar__nav { display: none; }
+@media (min-width: 620px) { .learn-bar__nav { display: flex; gap: 0.35rem; } }
+.learn-bar__nav a {
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: var(--radius-pill);
+}
+.learn-bar__nav a:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+
+.learn-bar__who {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.learn-bar__name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #fff;
+}
+/* Staff ask for this; a child does not need it taking room on a phone. */
+.learn-bar__member { display: none; }
+@media (min-width: 760px) {
+  .learn-bar__member {
+    display: inline;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.02em;
+  }
+}
+
+/* A real button, sized for a child's tap, not a text link they will miss. */
+.learn-bar__out {
+  appearance: none;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.85rem;
+  min-height: 40px;
+  border-radius: var(--radius-pill);
+  transition: background 0.15s, border-color 0.15s;
+}
+.learn-bar__out:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.4); }
+
 /* ─────────────────────────────────────────────────────────────────────────────
    The child's own dashboard (me-*).
 

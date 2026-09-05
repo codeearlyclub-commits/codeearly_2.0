@@ -13,7 +13,9 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import "@/styles/learn.css";
 import { getChildSession, CHILD_SESSION_COOKIE } from "@/lib/child-session";
+import { LearnNav } from "./LearnNav";
 
 export const dynamic = "force-dynamic";
 
@@ -30,5 +32,13 @@ export default async function LearnLayout({ children }: { children: React.ReactN
   // asking for an email address has no way forward.
   if (!child) redirect("/student");
 
-  return <>{children}</>;
+  // Rendered here rather than per page, so a child page added later cannot ship
+  // without a way off it — which is exactly how /me and the course player ended
+  // up as dead ends.
+  return (
+    <div className="learn-shell">
+      <LearnNav displayName={child.displayName} membershipId={child.membershipId} />
+      {children}
+    </div>
+  );
 }

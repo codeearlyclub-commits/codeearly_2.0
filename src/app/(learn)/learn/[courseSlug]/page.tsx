@@ -121,9 +121,17 @@ export default async function CourseOverviewPage({ params }: Props) {
                 {view.completedLessons === 0 ? "Start learning →" : "Continue →"}
               </Link>
             ) : (
-              <span style={{ color: "rgba(255,255,255,0.7)" }}>
-                Lessons are being added — check back soon.
-              </span>
+              /* No lessons yet. This used to be the ONLY thing here and it was
+                 a <span>, so a child who opened an empty course had no way out
+                 of the page at all. */
+              <>
+                <span style={{ color: "rgba(255,255,255,0.7)" }}>
+                  Lessons are being added — check back soon.
+                </span>
+                <Link className="btn-primary" href="/me">
+                  Back to my learning
+                </Link>
+              </>
             )}
           </div>
         </div>

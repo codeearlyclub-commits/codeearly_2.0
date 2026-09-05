@@ -304,16 +304,6 @@ export default async function StudentHomePage() {
           </section>
         )}
 
-        {/* A form cannot live inside a <p> — invalid HTML, and browsers close
-            the paragraph early, which breaks the layout in ways that only show
-            up in some engines. */}
-        <div style={{ marginTop: 24 }}>
-          <form action="/api/student/logout" method="post">
-            <button type="submit" className="btn-secondary">
-              Sign out
-            </button>
-          </form>
-        </div>
       </div>
     </main>
   );

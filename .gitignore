@@ -43,3 +43,6 @@ next-env.d.ts
 .idea
 .vscode/*
 !.vscode/extensions.json
+
+# UI sweep output — screenshots and report, regenerated on demand
+.ui-sweep/

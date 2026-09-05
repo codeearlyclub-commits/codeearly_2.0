@@ -16,9 +16,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # Host port 5433 — 5432 is taken by another project's Postgres on this
+    # machine, same reason Redis sits on 6380 below. Containers still reach it
+    # in-network on 5432 (see the app/worker/realtime DATABASE_URL).
     # Exposed to host for local Prisma Studio / psql; drop in prod if not needed.
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   redis:
     image: redis:7-alpine

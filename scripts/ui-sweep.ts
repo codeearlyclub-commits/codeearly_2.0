@@ -88,11 +88,35 @@ const results: Result[] = [];
  */
 async function parentContext(browser: Browser, base = BASE): Promise<BrowserContext> {
   const ctx = await browser.newContext();
-  const res = await ctx.request.post(`${base}/api/auth/sign-in/email`, {
-    data: { email: PARENT_EMAIL, password: PARENT_PASSWORD },
-    headers: { origin: base },
-  });
-  if (!res.ok()) throw new Error(`sign-in failed on ${base}: ${res.status()} ${await res.text()}`);
+
+  /**
+   * Signed in from INSIDE the page, not via `ctx.request`.
+   *
+   * Playwright's request API resolves hosts with Node's resolver, and on
+   * Windows that does not reliably map `*.localhost` to loopback — it worked
+   * for one run and then failed the next with ENOTFOUND admin.localhost,
+   * killing the admin sweep. Chromium implements RFC 6761 and always resolves
+   * it, so the browser does the sign-in and the cookie lands on the right
+   * origin by construction.
+   */
+  const page = await ctx.newPage();
+  await page.goto(`${base}/`, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT });
+  const status = await page.evaluate(
+    async (creds) => {
+      const r = await fetch("/api/auth/sign-in/email", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(creds),
+      });
+      return r.status;
+    },
+    { email: PARENT_EMAIL, password: PARENT_PASSWORD }
+  );
+  await page.close();
+
+  if (status < 200 || status >= 300) {
+    throw new Error(`sign-in failed on ${base}: ${status}`);
+  }
   return ctx;
 }
 
@@ -130,6 +154,62 @@ async function childContext(browser: Browser): Promise<BrowserContext> {
 // any design, which is what makes them worth automating before the design is
 // settled.
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** `rgb(r, g, b)` / `rgba(...)` → channels plus alpha. */
+function rgba(value: string): [number, number, number, number] | null {
+  const m = value.match(/rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,/\s]+([\d.]+))?/);
+  if (!m) return null;
+  return [Number(m[1]), Number(m[2]), Number(m[3]), m[4] === undefined ? 1 : Number(m[4])];
+}
+
+/**
+ * The colour actually behind an element, compositing translucent layers.
+ *
+ * Taking the first layer with any alpha at all is wrong, and wrong in the
+ * direction that invents bugs: the staff sign-in card is
+ * `rgba(255,255,255,0.04)` — a 4% white film over a near-black gradient — and
+ * reading that as solid white reported its white heading as white-on-white at
+ * 1:1. It is a correct, legible heading.
+ *
+ * `chain` runs child → ancestor, so composite from the far end back.
+ */
+function effectiveBackground(chain: string[]): [number, number, number] {
+  const layers = chain.map(rgba).filter((c): c is [number, number, number, number] => c !== null);
+
+  // Start at the deepest fully opaque layer; anything above it cannot show through.
+  let baseIndex = layers.findIndex((l) => l[3] >= 1);
+  if (baseIndex === -1) baseIndex = layers.length - 1;
+
+  // The page itself, when nothing up the tree paints.
+  let acc: [number, number, number] =
+    layers[baseIndex] && layers[baseIndex][3] >= 1
+      ? [layers[baseIndex][0], layers[baseIndex][1], layers[baseIndex][2]]
+      : [255, 255, 255];
+
+  for (let i = baseIndex - 1; i >= 0; i--) {
+    const [r, g, b, a] = layers[i];
+    if (a <= 0) continue;
+    acc = [
+      Math.round(r * a + acc[0] * (1 - a)),
+      Math.round(g * a + acc[1] * (1 - a)),
+      Math.round(b * a + acc[2] * (1 - a)),
+    ];
+  }
+  return acc;
+}
+
+function relativeLuminance([r, g, b]: [number, number, number]): number {
+  const f = [r, g, b].map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2];
+}
+
+function contrast(fg: [number, number, number], bg: [number, number, number]): number {
+  const [hi, lo] = [relativeLuminance(fg), relativeLuminance(bg)].sort((a, b) => b - a);
+  return (hi + 0.05) / (lo + 0.05);
+}
 
 async function inspect(page: Page, viewport: Viewport): Promise<Finding[]> {
   const findings: Finding[] = [];
@@ -171,6 +251,48 @@ async function inspect(page: Page, viewport: Viewport): Promise<Finding[]> {
 
     const bodyText = (document.body.innerText ?? "").trim();
 
+    /**
+     * Heading colour, and every background colour above it.
+     *
+     * NO HELPER FUNCTIONS IN HERE. tsx compiles this body with esbuild's
+     * keepNames, which wraps every named function in `__name(...)` — a helper
+     * that exists in Node and not in the page. Declaring `function parse()`
+     * here throws `__name is not defined` in the browser and the whole check
+     * silently reports nothing. The contrast maths is done in Node instead;
+     * this only collects strings.
+     */
+    const headings: { sel: string; text: string; color: string; chain: string[] }[] = [];
+    for (const el of Array.from(document.querySelectorAll("h1, h2, h3"))) {
+      const he = el as HTMLElement;
+      const txt = (he.innerText ?? "").trim();
+      if (!txt) continue;
+      const r = he.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;
+
+      const chain: string[] = [];
+      let node: Element | null = he;
+      while (node) {
+        const cs = getComputedStyle(node);
+        chain.push(cs.backgroundColor);
+        // A gradient contributes no backgroundColor, so take its first stop —
+        // that is what sits behind the top of a hero heading.
+        const gm = cs.backgroundImage.match(/rgba?\([^)]+\)/);
+        if (gm) chain.push(gm[0]);
+        node = node.parentElement;
+      }
+
+      const cls =
+        typeof he.className === "string" && he.className.trim()
+          ? `.${he.className.trim().split(/\s+/)[0]}`
+          : "";
+      headings.push({
+        sel: `${he.tagName.toLowerCase()}${cls}`,
+        text: txt.slice(0, 40),
+        color: getComputedStyle(he).color,
+        chain,
+      });
+    }
+
     return {
       brokenImages,
       overflowBy,
@@ -180,9 +302,32 @@ async function inspect(page: Page, viewport: Viewport): Promise<Finding[]> {
       linkCount: new Set(navLinks).size,
       inNav,
       textLength: bodyText.length,
+      headings,
       hasNextError: /Application error|Unhandled Runtime Error|This page could not be found/i.test(bodyText),
     };
   });
+
+  for (const h of dom.headings) {
+    const parsedFg = rgba(h.color);
+    if (!parsedFg) continue;
+    const bg = effectiveBackground(h.chain);
+    // Translucent text sits on its own background too.
+    const fg: [number, number, number] = [
+      Math.round(parsedFg[0] * parsedFg[3] + bg[0] * (1 - parsedFg[3])),
+      Math.round(parsedFg[1] * parsedFg[3] + bg[1] * (1 - parsedFg[3])),
+      Math.round(parsedFg[2] * parsedFg[3] + bg[2] * (1 - parsedFg[3])),
+    ];
+    const cr = contrast(fg, bg);
+    // 3:1 is the WCAG minimum for large text, and headings are large. Anything
+    // under it is not a design opinion — it is unreadable.
+    if (cr < 3) {
+      findings.push({
+        level: "error",
+        kind: "contrast",
+        detail: `${h.sel} "${h.text}" — ${cr.toFixed(2)}:1 (${h.color} on ${bg.join(",")})`,
+      });
+    }
+  }
 
   if (dom.hasNextError) {
     findings.push({ level: "error", kind: "runtime", detail: "Next.js error screen rendered" });

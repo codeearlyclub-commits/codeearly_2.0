@@ -113,6 +113,8 @@
   overflow: hidden;
   background: linear-gradient(135deg, #0b1628 0%, #1a2a4a 55%, #2d1b5e 100%);
   color: #fff;
+  /* Without this the global h1 rule paints the child's own name navy, on navy. */
+  --heading: #fff;
   padding: 32px clamp(16px, 4vw, 48px) 36px;
 }
 .me-hero__blob {
@@ -269,6 +271,7 @@
 .learn-hero {
   background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
   color: #fff;
+  --heading: #fff;
   padding: 40px clamp(16px, 4vw, 48px);
 }
 .learn-hero__inner { max-width: 1100px; margin-inline: auto; }

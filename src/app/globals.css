@@ -21,6 +21,24 @@ body {
   line-height: 1.6;
 }
 
+/**
+ * Headings.
+ *
+ * `--heading` exists because colouring headings here DIRECTLY was silently
+ * breaking every dark surface in the app. A direct selector always beats
+ * inheritance, so a panel that set `color: #fff` on itself still got navy
+ * headings — navy on navy. The child's own name on /me rendered at 1.07:1,
+ * invisible but for the emoji after it, and nobody noticed because the text is
+ * present in the DOM and passes every check that is not a contrast check.
+ *
+ * The one-off `.auth--staff .auth__card h1 { color: #fff }` in auth.css is the
+ * fossil of someone hitting this and patching the instance in front of them.
+ *
+ * So: a dark surface sets `--heading` next to its `color`, and its headings
+ * follow. Light surfaces are unchanged — the fallback is the same navy as
+ * before. `scripts/ui-sweep.ts` fails any heading under 3:1, so a surface that
+ * forgets is caught rather than shipped.
+ */
 h1,
 h2,
 h3,
@@ -29,7 +47,7 @@ h4 {
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: var(--navy);
+  color: var(--heading, var(--navy));
 }
 
 a {

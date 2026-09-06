@@ -55,7 +55,7 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="x-form">
+    <form method="post" onSubmit={onSubmit} className="x-form">
       <label>
         Your name
         <input name="name" type="text" required minLength={2} maxLength={80} autoComplete="name" />

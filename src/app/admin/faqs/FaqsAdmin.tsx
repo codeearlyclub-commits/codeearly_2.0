@@ -155,7 +155,7 @@ export function FaqsAdmin({ faqs }: { faqs: FaqRow[] }) {
 
       {editing && (
         <div className="modal" role="dialog" aria-modal="true" aria-label="Edit FAQ">
-          <form className="modal__box modal__box--wide" onSubmit={save}>
+          <form method="post" className="modal__box modal__box--wide" onSubmit={save}>
             <h2>{editing.id ? "Edit question" : "Add a question"}</h2>
 
             <label>

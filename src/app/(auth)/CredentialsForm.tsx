@@ -60,7 +60,23 @@ export function CredentialsForm({
   }
 
   return (
-    <form className="auth__form" onSubmit={onSubmit}>
+    /**
+     * `method="post"` matters even though onSubmit handles the submit.
+     *
+     * A form with no method defaults to GET. If anything submits it before React
+     * hydrates and attaches this handler — a slow device, a slow network, or
+     * simply typing fast and pressing Enter — the browser does a NATIVE submit,
+     * and with GET that puts every field in the query string.
+     *
+     * That is exactly what happened: the journey check landed on
+     * `/login/parent?email=…&password=JourneyTest2026%21`. A parent's password,
+     * in the address bar, in browser history, in Caddy's access log, and in the
+     * Referer header of anything the page loads next.
+     *
+     * POST puts the fields in a request body instead. The pre-hydration submit
+     * still fails — but it fails visibly and without leaking a credential.
+     */
+    <form method="post" className="auth__form" onSubmit={onSubmit}>
       <label>
         Email
         <input name="email" type="email" required autoComplete="email" autoFocus />

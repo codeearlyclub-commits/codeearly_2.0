@@ -56,7 +56,7 @@ export function JoinQuiz() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="play__form">
+    <form method="post" onSubmit={onSubmit} className="play__form">
       <label>
         Room code
         <input

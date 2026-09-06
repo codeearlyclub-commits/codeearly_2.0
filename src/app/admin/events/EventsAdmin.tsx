@@ -211,7 +211,7 @@ export function EventsAdmin({ events }: { events: EventRow[] }) {
 
       {editing && (
         <div className="modal" role="dialog" aria-modal="true" aria-label="Edit event">
-          <form className="modal__box modal__box--wide" onSubmit={save}>
+          <form method="post" className="modal__box modal__box--wide" onSubmit={save}>
             <h2>{editing.id ? "Edit event" : "New event"}</h2>
 
             <label>

@@ -75,7 +75,7 @@ export default function RegisterPage() {
           sign-in later, with a code and PIN rather than an email address.
         </p>
 
-        <form className="auth__form" onSubmit={onSubmit}>
+        <form method="post" className="auth__form" onSubmit={onSubmit}>
           <label>
             Your name
             <input name="name" type="text" required autoComplete="name" minLength={2} autoFocus />

@@ -57,7 +57,7 @@ export default function StudentLoginPage() {
         <h1>Hello! 👋</h1>
         <p className="auth__lede">Type the code and PIN your parent gave you.</p>
 
-        <form className="auth__form" onSubmit={onSubmit}>
+        <form method="post" className="auth__form" onSubmit={onSubmit}>
           <label>
             Your code
             <input

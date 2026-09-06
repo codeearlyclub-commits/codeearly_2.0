@@ -85,7 +85,7 @@ export function RsvpForm({ slug, full }: { slug: string; full: boolean }) {
   }
 
   return (
-    <form className="event-reg-form" onSubmit={onSubmit}>
+    <form method="post" className="event-reg-form" onSubmit={onSubmit}>
       {state.status === "error" && (
         <p role="alert" style={{ color: "#E24B4A", fontSize: 13, margin: 0 }}>
           {state.message}

@@ -122,7 +122,7 @@ export function PostEditor({ initial }: { initial: PostDraft }) {
   }
 
   return (
-    <form onSubmit={save}>
+    <form method="post" onSubmit={save}>
       <div className="admin__crumbs">
         <Link href="/admin/blog">← All posts</Link>
       </div>

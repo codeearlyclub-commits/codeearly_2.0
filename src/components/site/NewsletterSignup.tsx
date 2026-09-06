@@ -48,7 +48,7 @@ export function NewsletterSignup() {
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ marginTop: 8 }}>
+    <form method="post" onSubmit={onSubmit} style={{ marginTop: 8 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <input
           className="form-input"

@@ -86,7 +86,7 @@ export function InvoiceActions({ cancelNumber }: { cancelNumber?: string }) {
           Raise a custom invoice
         </button>
       ) : (
-        <form className="panel" onSubmit={raise}>
+        <form method="post" className="panel" onSubmit={raise}>
           <h2>Custom invoice</h2>
           <p className="muted">
             For anything the catalogue does not cover — a private lesson, an extra

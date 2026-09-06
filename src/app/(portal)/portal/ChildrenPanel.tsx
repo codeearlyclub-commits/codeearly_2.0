@@ -208,7 +208,7 @@ export function ChildrenPanel({ initialChildren }: { initialChildren: Child[] })
           >
             Add a child
           </h3>
-          <form className="pform" onSubmit={addChild}>
+          <form method="post" className="pform" onSubmit={addChild}>
             <div className="pform__row">
               <label>
                 Child&apos;s name

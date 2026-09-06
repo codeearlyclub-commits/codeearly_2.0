@@ -166,7 +166,7 @@ export function TestimonialsAdmin({ testimonials }: { testimonials: TestimonialR
 
       {editing && (
         <div className="modal" role="dialog" aria-modal="true" aria-label="Edit testimonial">
-          <form className="modal__box" onSubmit={save}>
+          <form method="post" className="modal__box" onSubmit={save}>
             <h2>{editing.id ? "Edit testimonial" : "Add a testimonial"}</h2>
 
             <label>

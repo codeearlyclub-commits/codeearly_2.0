@@ -220,7 +220,7 @@ export function ShowcaseAdmin({ projects }: { projects: ShowcaseRow[] }) {
 
       {editing && (
         <div className="modal" role="dialog" aria-modal="true" aria-label="Edit showcase project">
-          <form className="modal__box modal__box--wide" onSubmit={save}>
+          <form method="post" className="modal__box modal__box--wide" onSubmit={save}>
             <h2>{editing.id ? "Edit project" : "Add a project"}</h2>
 
             <label>

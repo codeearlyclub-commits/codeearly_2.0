@@ -285,7 +285,7 @@ export function CurriculumBuilder({
         </Link>
       </div>
 
-      <form className="admin__search" onSubmit={addSection}>
+      <form method="post" className="admin__search" onSubmit={addSection}>
         <input
           value={newSection}
           onChange={(e) => setNewSection(e.target.value)}
@@ -368,7 +368,7 @@ export function CurriculumBuilder({
       {/* ── Lesson editor ───────────────────────────────────────────────────── */}
       {draft && (
         <div className="modal" role="dialog" aria-modal="true" aria-label="Edit lesson">
-          <form className="modal__box modal__box--wide" onSubmit={saveLesson}>
+          <form method="post" className="modal__box modal__box--wide" onSubmit={saveLesson}>
             <h2>{draft.id ? "Edit lesson" : "New lesson"}</h2>
 
             <label>

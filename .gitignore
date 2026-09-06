@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Local database dumps — never commit these
 .backups/
+
+# Editor/tool temp files
+*.tmp.*

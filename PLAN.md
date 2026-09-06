@@ -1,129 +1,179 @@
-# CodeEarly 2.0 — Plan
+# Plan
 
-_Replaces the roadmap sketch in ARCHITECTURE.md §11. That was written before any
-code existed; this is written from the actual state of the repository._
+_Rewritten 2026-09-06. Supersedes the previous plan and the ordering in
+[AUDIT.md](./AUDIT.md) §5. [AUDIT.md](./AUDIT.md) stays as the inventory — what
+exists, counted — and this is what to do about it._
 
 ---
 
-## 1. Where we actually are
+## 1. What changed the plan
 
-Ten commits in. The honest summary is that **the load-bearing layers are done
-and tested, and most of the visible product is not built yet.** That imbalance
-was deliberate — auth, money and tenancy are the things that are ruinous to
-retrofit — but it is now the thing to correct.
+Two things were found by running the system rather than reading it, and both
+move work that was scheduled late to the front.
 
-| Surface | Built | Notes |
+**The job queues have no producers.** Redis and BullMQ are working correctly, but
+four of the five queues are never written to and nothing recurs:
+
+```
+emailQueue      1 producer call
+reminderQueue   0
+quizQueue       0
+backupQueue     0
+pushQueue       0
+
+repeatable jobs / schedulers:  none anywhere
+```
+
+So the missing piece is not five processors — it is **a scheduler**. There are
+two independent reasons nothing is backed up: the processor is a `TODO`, and
+nothing would ever call it. Writing `pg_dump` today would change nothing.
+
+Worse, the stub processors `return` normally, so BullMQ marks those jobs
+**completed**. The `failed` handler never fires and a queue dashboard shows
+green. A stub is worse than a crash: a crash retries and lands in the failed set
+where you would see it.
+
+One consolation: `subscription-expiry` is fully implemented — it expires ended
+subscriptions and lapsed org plans. It is dead code purely because nothing
+triggers it. One scheduler registration brings it to life.
+
+**A browser sweep found what no test could.** 88 page loads across four
+audiences at two widths. The public site was clean, but the child area had no
+navigation at all, and the child's own name rendered navy-on-navy at 1.07:1 —
+invisible. Both are now fixed; the point is that neither was findable by any
+check that does not open a page and measure colour.
+
+---
+
+## 2. The ordering principle
+
+**Risk retired per unit of work, not features per unit of work.** Everything in
+Phase A is small. It is first because the platform currently cannot prove it
+would survive a disk failure.
+
+---
+
+## 3. The plan
+
+### Phase A — Make the queues real _(next, ~1 day)_
+
+The whole phase is small and retires both severe risks in [AUDIT.md](./AUDIT.md) §4.
+
+| # | Task | Why |
 |---|---|---|
-| Public website | **~75%** | Home, courses, programs (+ detail pages), about, contact — all verified in Docker behind Caddy. Missing: blog, showcase, events, SEO extras |
-| Parent portal | **~25%** | Auth, children, student codes. No invoices/courses/programs UI |
-| Admin | **0%** | Nothing. This is why content still comes from a seed script |
-| Mobile app | **~10%** | Capacitor config + docs. Loads the hosted portal (server-rendered, so no static export). Android buildable on this machine; **iOS needs a Mac** |
-| Quiz product | **~15%** | Tenancy, plans, entitlements, billing, join codes. No engine, no host UI |
+| A1 | **A scheduler.** Register repeatable jobs on worker boot via BullMQ's `JobScheduler` — nightly backup, a daily reminders sweep. Idempotent, so restarts do not duplicate | Nothing recurs today. This alone activates the already-written expiry enforcement |
+| A2 | **Backup processor.** `pg_dump` → the `pgdata` volume's sibling, gzip, retention window. R2 upload lands in Phase C | **Do not block backups on R2 credentials.** A local dump on the same box is weak, and it is infinitely better than nothing |
+| A3 | **Unimplemented processors must fail loudly.** `quiz` and `backup` throw a clear "not implemented" rather than returning success. `push` stays a logged no-op — there is no mobile client to receive one yet | A job that silently succeeds is indistinguishable from one that worked |
+| A4 | **Failure alerting.** On a job exhausting retries, enqueue an ops email | Otherwise the failed set is a page nobody opens |
 
-**Backend:** roughly Phase 3 of 6. **Visible product:** roughly Phase 1.
+**Verification:** a `check-jobs.ts` that boots the worker, asserts the schedulers
+are registered, enqueues one of each job, and asserts a dump file exists on disk
+and that a stubbed queue actually fails. In CI.
 
-## 2. What is verified, not merely written
+### Phase B — Auth completeness _(~1 day)_
 
-Everything below is asserted by an automated check, most of them in CI:
+Smaller than previously scoped: `sendResetPassword` and `sendVerificationEmail`
+are already wired in `lib/auth.ts`. **Only the pages are missing.**
 
-| Check | Guards against |
+- `/forgot-password`, `/reset-password`
+- Resend verification
+- Change password in the portal
+- A link back to the site from the five sign-in pages — the sweep flags every
+  one as having no way off it
+
+**Why now:** a locked-out parent currently has no self-service path at all. On a
+live platform with paying customers this is a week-one support crisis.
+
+### Phase C — Uploads (R2) _(blocked on credentials)_
+
+`env.ts` declares all five R2 vars as `.optional()`, so the app boots without
+them and nothing complains. Add the upload service, then wire certificates,
+showcase images, course art and avatars.
+
+**Unblock locally with MinIO in compose** rather than waiting. The S3 API is the
+same, so the swap to R2 is a config change.
+
+### Phase D — Portal depth + child growth _(largest surface gap)_
+
+6 of V4's 27 parent pages exist. In rough order of who asks for them: select
+child, quiz history, change password, settings, help, add child, subscribe,
+tasks, certificates, challenges, competitions.
+
+The child header added this week grows into tabs here, once there is somewhere
+to tab to.
+
+### Phase E — Tasks, assignments, challenges _(needs models)_
+
+`StudentTask`, `Assignment`, `Challenge`, `ChallengeSubmission`, `Notification`,
+`DeviceToken`. The weekly touchpoints between live classes, and the thing that
+makes the LMS more than a video list.
+
+### Phase F — CMS + pricing
+
+Homepage copy and member pricing are hardcoded; V4 had both editable. Changing a
+price currently means a deploy. `SitePage`, `PaymentPlan`, `Partner`.
+
+### Phase G — Admin long tail
+
+Settings, admin users, maintenance mode, payments ledger, newsletter compose and
+send, message templates and campaigns, LMS import.
+
+Plus the small one the sweep found: **every admin page's `<title>` is the public
+site's**, because no admin page exports `metadata`. Staff get a dozen identical
+tabs.
+
+### Phase H — End-to-end tests
+
+Promote `scripts/ui-sweep.ts` from a survey to a gate and put it in CI, plus real
+journeys: sign up → verify → add child → student sign-in → complete a lesson;
+and a payment through the Paystack test rail.
+
+**Before migration, not after.**
+
+### Phase I — Migration and cut-over
+
+Write `scripts/migrate-from-v4.ts` — it does not exist despite being referenced
+in `scripts/README.md` and ARCHITECTURE §10 as though it does. Map 175 V4 routes
+worth of shapes in FK-safe order, verify counts, switch DNS.
+
+### Phase J — Public quiz product
+
+Only after the trust and safety surfaces exist: abuse reports, suspensions, host
+verification. It deliberately puts strangers near children.
+
+---
+
+## 4. Quick wins, not worth a phase
+
+Do these alongside whatever is in flight.
+
+| Item | Cost |
 |---|---|
-| `check-invoice-numbering` | A rolled-back transaction leaving a hole in the invoice series |
-| `check-program-capacity` | Overselling a program under concurrent registration |
-| `check-paystack-webhook` (9) | Forged signatures, double-credit on retry, amount mismatch |
-| `check-paystack-api` (6) | Initialize/verify against the real Paystack test API (local only — CI has no keys) |
-| `tests/unit` (29) | Money conversion; plan entitlements, lapse and suspension |
-| Manual E2E (12) | Signup → verify → child → student login; child/parent isolation; PIN lockout |
+| **Retry on DB connect.** A transient blip currently becomes a 500 in a parent's face — the sweep caught one on `/portal`. Prisma has no retry; a short bounded retry on connect errors is a few lines | Minutes |
+| Admin page titles (`export const metadata` per section) | Minutes |
+| `output: "standalone"` — cuts the 1.33GB image substantially | Minutes |
+| Prisma 6 → 7, and move `package.json#prisma` to `prisma.config.ts` | An hour, on its own |
 
-**Four real defects were found by running things, not reading them:** every
-signup was broken by missing auth columns; sessions claimed Redis they were not
-using; there was no auth rate limiting at all; and programs could be oversold.
-Three would have reached production silently.
-
-## 3. Known debt
-
-| # | Item | Severity | Plan |
-|---|---|---|---|
-| 1 | ~~Email cannot send~~ **RESOLVED.** Resend is primary (REST via `fetch`, no SDK), SMTP is fallback. Key valid, `codeearly.com` already verified, real test message delivered. The broken `mail.codeearly.com` SMTP host no longer matters — it is an unused fallback | Resolved | — |
-| 2 | ~~Docker never built or run~~ **RESOLVED.** Full stack verified: Caddy → Next.js → Postgres + Redis, `/api/health` returns `db: ok, redis: ok` over HTTPS, migrations applied on container start. Found and fixed a deployment-breaking bug in doing so: compose builds the *last* Dockerfile stage without an explicit `target`, so the `app` service was running the **worker** image and crash-looping on a missing production build | Resolved | Image is 1.33GB — switch to `output: "standalone"` when convenient |
-| 3 | 7 npm advisories, all dev-only ESLint tooling | Low | No production exposure; revisit when upstream fixes land |
-| 4 | Prisma 6 → 7 available; `package.json#prisma` config deprecated | Low | Do as its own change, not mid-phase |
-| 5 | `next build` fetches fonts from Google at build time | Low | Self-host woff2 if it keeps failing on flaky DNS |
-| 6 | No e2e browser tests | Medium | Playwright once the portal has real screens |
-| 7 | ARCHITECTURE.md §11 roadmap is now stale | — | Superseded by this document |
-
-> **Superseded by [AUDIT.md](./AUDIT.md).** A count of the real surface showed
-> 2.0 covers only ~12% of V4's API routes and 14% of its admin sections: the
-> foundations are done, most of the product is not. Migration moves to LAST and
-> the LMS moves up. The section below is kept for its reasoning about ordering.
-
-## 4. The replan
-
-The original roadmap put **the entire saleable quiz product in Phase 4, ahead of
-migrating the live platform**. Now that the cost of a phase is measurable, that
-ordering puts a second product between you and cut-over. So Phase 4 is split,
-and admin moves earlier.
-
-### Phase 3A — Admin core _(next)_
-Courses, programs, sessions, content CRUD. Grouped nav + ⌘K palette.
-**Why first:** it unblocks *you*. Until it exists, every course and program has
-to come from me writing fixtures. With it, you create real content while I build
-the surfaces that render it.
-Also: wire SMTP so email verification actually reaches a parent.
-
-### Phase 3B — Public website
-Home, about, courses, programs, events, showcase, blog, membership, contact.
-Ported content from V4, rebuilt on the token layer. SEO, sitemap, structured data.
-**Why second:** it is the top of the funnel, and it needs real content to render.
-
-### Phase 3C — Portal depth + LMS
-Lessons, tasks, progress, report cards, certificates, invoices UI, enrolment
-flows. The child-facing side of the student login already built.
-
-### Phase 3D — Mobile shell
-Capacitor wrap of the portal, native push via the `push` queue. Small, because
-the API has been bearer-ready since Phase 1.
-
-### Phase 4 — Quiz engine _(CodeEarly's own)_
-Socket.io + Redis, server-authoritative state machine, the full lifecycle and
-every fix earned in V4. Multi-tenant from the first line, but only CodeEarly
-hosts on it. **This is what Friday quizzes need, and it is worth having before
-cut-over.**
-
-### Phase 5 — Migration & cut-over
-V4 Mongo → Postgres, verification, DNS switch. **Moved ahead of the public quiz
-product**, so the live platform lands on solid ground instead of waiting behind
-a second product.
-
-### Phase 6 — Public quiz product _(the saleable layer)_
-Org signup, host dashboard, join-code rooms with guest players, plan checkout,
-public directory, trust & safety. Everything structural for this already exists
-in the schema, so it is additive rather than a rewrite.
-
-**The change in one line:** ship CodeEarly's own platform first, then sell the
-quiz engine — rather than building a second product before the first is
-migrated.
+---
 
 ## 5. Blocked on you
 
-| Need | For | Status |
+| Need | Blocks | Age |
 |---|---|---|
-| Defender exclusions (admin PowerShell) | Everything — builds take minutes | Outstanding |
-| SMTP credentials | Real email verification | Available in V4 `.env` |
-| Brand assets (logo, any designs) | 3B website polish | Palette + fonts recovered from V4 |
-| R2 credentials | Uploads, certificates | Needed by 3C |
-| Mongo read-only URI | Phase 5 migration | Available in V4 `.env` |
-| VPS provider + region | Deployment | Undecided — Hetzner (cheap, EU) vs closer to Nigeria |
-| Timeline / target date | Sequencing | Undecided |
+| **R2 credentials** | Phase C and everything downstream | 3 planning docs |
+| **VPS provider + region** | Any deployment; the mobile app is inert without a hosted URL | 3 planning docs |
+| **Defender exclusions** | Build speed on this machine | 3 planning docs |
+| **A Mac, or a plan for one** | iOS release entirely — `ios/` exists but Apple requires macOS to build and sign | New |
+| Sample report card + certificate | Getting Phase C right first time rather than guessing | 2 docs |
+| Mongo read-only URI | Phase I only | Not yet needed |
 
-## 6. Risks
+---
 
-1. **This machine.** A 2-hour npm install, 10-minute lint runs, intermittent DNS
-   and Docker port failures. Not a code risk, but it is the single largest drag
-   on delivery, and the Defender exclusions are a two-minute fix.
-2. **Cut-over timing.** Every phase before Phase 5 is time the live V4 platform
-   keeps running with its known ceilings — the Pusher 100-connection cap during
-   Friday quizzes being the sharpest.
-3. **Scope of the quiz product.** It is a genuine second product with its own
-   support burden, abuse surface, and duty of care to other people's children.
-   Worth confirming the appetite before Phase 6 rather than during it.
+## 6. What this plan deliberately does not do
+
+- **It does not start new product surface until Phase A is done.** One day of
+  work is the difference between "we have backups" and "we believe we do".
+- **It does not wait for R2 to start backing up.** A local dump now beats a
+  perfect dump later.
+- **It keeps the quiz product last.** It is a second product with its own support
+  burden and duty of care, and the first one is not migrated yet.

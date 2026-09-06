@@ -94,11 +94,11 @@ None of these exist in `schema.prisma`.
 | Item | State |
 |---|---|
 | **R2 uploads** | `env.ts` names the vars; **no upload service exists**. Blocks course images, certificates, showcase, avatars |
-| **Reminder jobs** | Queue runs, processor is `TODO(Phase 3)`. No expiry, session or birthday reminders send |
+| **Reminder jobs** | Nothing enqueues them and nothing schedules them. The `subscription-expiry` branch is written and works; session and birthday reminders are `TODO` |
 | **Quiz result PDFs** | Queue runs, processor is `TODO(Phase 4)` |
 | **Nightly backups** | Queue runs, processor is `TODO(Phase 6)`. **Nothing is backed up** |
 | **Push delivery** | Queue and stub exist; no FCM/APNs, no token registration |
-| **Password reset UI** | Better Auth supports it. **Zero pages, zero calls.** A locked-out parent has no path |
+| **Password reset UI** | `sendResetPassword` and `sendVerificationEmail` ARE wired in `lib/auth.ts`. Only the pages are missing, so this is smaller than it looks — but a locked-out parent still has no path |
 | **Email verification resend UI** | Same |
 | **Portal depth** | 21 of V4's 27 parent pages absent: select-child, quiz history, change password, settings, help, add-child, subscribe, tasks, certificates, challenges, competitions |
 | **Admin long tail** | settings, admin users, maintenance, payments ledger, api-docs, help, kahoot, newsletter compose/send, message templates and campaigns, LMS import |
@@ -123,11 +123,20 @@ holds payment records, invoices and children's learning history. A lost Postgres
 volume loses all of it with no recovery path. This is the highest-consequence
 item in the repository and it is a stub.
 
-**2. Queued jobs are silently dropped.** The `reminders`, `quiz` and `push`
-processors are stubs that accept a job and do nothing. Nothing errors, nothing
-alerts. Anyone reasoning about this system will assume enqueued means sent —
-subscription-expiry reminders being the sharpest case, because the failure is
-invisible until renewals quietly stop.
+**2. Four of the five queues have no producer, and nothing recurs.** Counting
+`.add()` calls: `emailQueue` 1, and `reminders`, `quiz`, `backup`, `push` zero
+between them. There is no repeatable job, scheduler or cron anywhere. So the
+backup has TWO independent reasons never to run — a stub processor, and nothing
+that would call it.
+
+The stubs compound it: they `return` normally, so BullMQ marks those jobs
+**completed**, the `failed` handler never fires, and a queue dashboard shows
+green. A stub is worse than a crash — a crash retries and lands in the failed
+set where you would see it.
+
+Note `subscription-expiry` IS fully implemented and does real enforcement work.
+It is dead code only because nothing triggers it, so one scheduler registration
+brings it to life.
 
 **3. No password reset.** On a live platform with paying parents this is a
 support crisis in week one, and it is the most common auth request there is.
@@ -183,6 +192,9 @@ consent beyond account creation.
 ---
 
 ## 5. Revised order
+
+> **Superseded by [PLAN.md](./PLAN.md)**, rewritten after the queue producers
+> were counted. Kept for its reasoning.
 
 The LMS core is done, so the old ordering is spent. What follows is sequenced by
 risk retired per unit of work.

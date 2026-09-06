@@ -17,6 +17,9 @@ import { deliver, isEmailConfigured } from "@/server/email/transport";
 import type { EmailJob, ReminderJob, QuizJob, BackupJob, PushJob } from "./queues";
 import { expireEndedSubscriptions } from "@/server/payments/subscriptions";
 import { expireLapsedOrgPlans } from "@/server/orgs/plans";
+import { runBackup, backupDir } from "./backup";
+import { registerSchedules } from "./schedule";
+import { emailQueue } from "./queues";
 
 const log = (q: string, msg: string, extra?: unknown) =>
   console.log(`[worker:${q}] ${msg}`, extra ?? "");
@@ -88,14 +91,31 @@ workers.push(
 workers.push(
   new Worker<QuizJob>("quiz", async (job: Job<QuizJob>) => {
     log("quiz", `${job.data.kind} → session ${job.data.sessionId}`);
-    // TODO(Phase 4): compute ranks, write QuizResult, render PDF to R2.
+    /**
+     * THROWS, rather than returning quietly.
+     *
+     * A processor that returns normally is marked COMPLETED by BullMQ. The
+     * `failed` handler never fires, the failed set stays empty, and a queue
+     * dashboard shows green over work that never happened — so an enqueued job
+     * is indistinguishable from a finished one. Failing puts it in the failed
+     * set where it is visible and can be replayed once this is built.
+     */
+    throw new Error(
+      `quiz processor not implemented (${job.data.kind}) — see PLAN.md, ranks and result PDFs land with the quiz phase`
+    );
   }, { connection: bullConnection })
 );
 
 workers.push(
   new Worker<BackupJob>("backup", async (job: Job<BackupJob>) => {
-    log("backup", `run → ${job.data.kind}`);
-    // TODO(Phase 6): pg_dump → R2 with retention.
+    log("backup", `run → ${job.data.kind} (into ${backupDir})`);
+    const result = await runBackup();
+    log(
+      "backup",
+      `wrote ${(result.bytes / 1024 / 1024).toFixed(1)}MB in ${(result.durationMs / 1000).toFixed(1)}s → ${result.file}` +
+        (result.pruned.length ? ` | pruned ${result.pruned.length} old dump(s)` : "")
+    );
+    return { file: result.file, bytes: result.bytes };
   }, { connection: bullConnection })
 );
 
@@ -109,9 +129,65 @@ workers.push(
   }, { connection: bullConnection })
 );
 
-for (const w of workers) {
-  w.on("failed", (job, err) => console.error(`[worker] ${w.name} job ${job?.id} failed:`, err.message));
+/**
+ * A job that has exhausted its retries must reach a human.
+ *
+ * Until now the only signal was a line on stderr in a container nobody tails.
+ * The failed set is a page that gets opened after someone already noticed the
+ * damage — which for a backup means noticing during a restore.
+ *
+ * Deliberately fire-and-forget onto the email queue: alerting must never be
+ * able to fail a job a second time, and the email queue has its own retries. If
+ * email itself is broken the stderr line is still there, which is why it stays.
+ */
+const OPS_EMAIL = process.env.OPS_EMAIL ?? process.env.ADMIN_EMAIL;
+
+async function alertExhausted(queue: string, job: Job | undefined, err: Error) {
+  if (!OPS_EMAIL || !job) return;
+  const attempts = job.opts?.attempts ?? 1;
+  if (job.attemptsMade < attempts) return; // still retrying — not yet news
+
+  const subject = `[CodeEarly] ${queue} job failed after ${job.attemptsMade} attempt(s)`;
+  const text =
+    `Queue:   ${queue}
+` +
+    `Job:     ${job.id} (${job.name})
+` +
+    `Attempts:${job.attemptsMade}/${attempts}
+` +
+    `Error:   ${err.message}
+
+` +
+    `Data:    ${JSON.stringify(job.data)?.slice(0, 500)}
+`;
+
+  await emailQueue
+    .add("ops-alert", { to: OPS_EMAIL, subject, html: `<pre>${text}</pre>`, text })
+    .catch((e) => console.error("[worker] could not queue failure alert:", e?.message));
 }
+
+for (const w of workers) {
+  w.on("failed", (job, err) => {
+    console.error(`[worker] ${w.name} job ${job?.id} failed:`, err.message);
+    void alertExhausted(w.name, job, err);
+  });
+}
+
+/**
+ * Registering the schedules is part of BOOTING, not an optional extra. If it
+ * fails the worker must not sit there looking healthy while nothing recurs —
+ * which is precisely the state this whole phase exists to end.
+ */
+registerSchedules()
+  .then((registered) => {
+    for (const r of registered) {
+      console.log(`[worker:schedule] ${r.queue} · ${r.id} · ${r.pattern}`);
+    }
+  })
+  .catch((err) => {
+    console.error("[worker] FAILED TO REGISTER SCHEDULES — nothing will recur:", err);
+    process.exit(1);
+  });
 
 console.log(`✅ CodeEarly worker up — queues: ${workers.map(w => w.name).join(", ")}`);
 

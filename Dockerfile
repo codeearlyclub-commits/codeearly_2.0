@@ -40,6 +40,10 @@ CMD ["npm", "run", "start"]
 # ── Worker: full deps + source, runs BullMQ via tsx ──────────────────────────
 FROM base AS worker
 ENV NODE_ENV=production
+# postgresql16-client for pg_dump — the nightly backup runs in THIS container,
+# and the version is pinned to match postgres:16-alpine. A newer client can dump
+# an older server, but the reverse fails outright, so these two move together.
+RUN apk add --no-cache postgresql16-client
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate

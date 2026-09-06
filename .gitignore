@@ -46,3 +46,6 @@ next-env.d.ts
 
 # UI sweep output — screenshots and report, regenerated on demand
 .ui-sweep/
+
+# Local database dumps — never commit these
+.backups/

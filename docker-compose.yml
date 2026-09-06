@@ -81,6 +81,14 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
       REDIS_URL: redis://redis:6379
       NODE_ENV: production
+      BACKUP_DIR: /backups
+    volumes:
+      # A NAMED VOLUME, not a path inside the container. A backup that dies with
+      # the container it lives in is not a backup — and `docker compose up
+      # --build` replaces this container on every deploy. Phase C copies these
+      # off the box entirely; until then this at least survives a redeploy and
+      # can be pulled with `docker cp`.
+      - backups:/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -133,6 +141,7 @@ services:
       - caddyconfig:/config
 
 volumes:
+  backups:
   pgdata:
   redisdata:
   caddydata:

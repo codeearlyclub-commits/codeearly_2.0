@@ -43,6 +43,16 @@ const schema = z.object({
   SMTP_FROM: z.string().optional(),
   ADMIN_EMAIL: z.string().optional(),
 
+  // Backups. BACKUP_DIR defaults to .backups next to the repo in development
+  // and is /backups (a named volume) in the worker container.
+  BACKUP_DIR: z.string().optional(),
+  BACKUP_RETENTION_DAYS: z.coerce.number().optional(),
+  BACKUP_CRON: z.string().optional(),
+  EXPIRY_CRON: z.string().optional(),
+  SCHEDULE_TZ: z.string().optional(),
+  /** Where exhausted-retry alerts go. Falls back to ADMIN_EMAIL. */
+  OPS_EMAIL: z.string().optional(),
+
   R2_ACCOUNT_ID: z.string().optional(),
   R2_ACCESS_KEY_ID: z.string().optional(),
   R2_SECRET_ACCESS_KEY: z.string().optional(),
